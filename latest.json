@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 7,
-  "versionName": "0.5.1-pilot",
-  "notes": "Navegação do controle corrigida, nova identidade visual e verificação da sessão Letterboxd. A sincronização automática do Letterboxd será refeita na 0.5.2.",
+  "versionCode": 8,
+  "versionName": "0.5.2-pilot",
+  "notes": "Letterboxd automático: watchlist em Quero ver, notas dos amigos no filme focado e envio da nota ao concluir. Séries sem a aba Quero ver.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.1/Cinema-TV-0.5.1-Chromecast-HD.apk",
-      "bytes": 71997376,
-      "sha256": "63f517ce8f66bbfc777a9f7d6399eb217d9942d2c5ac2600702c75e3f20752d8"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.2/Cinema-TV-0.5.2-Chromecast-HD.apk",
+      "bytes": 72003224,
+      "sha256": "adba30d654570d8b9fed3fdd54f95778330ce9d0c619cb669d3caf28172eb502"
     }
   }
 }
