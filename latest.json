@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 8,
-  "versionName": "0.5.2-pilot",
-  "notes": "Letterboxd automático: watchlist em Quero ver, notas dos amigos no filme focado e envio da nota ao concluir. Séries sem a aba Quero ver.",
+  "versionCode": 9,
+  "versionName": "0.5.3-pilot",
+  "notes": "Aba Amigos ao lado do relógio; + numa série acompanha; Continuar sem filmes só espiados ou já vistos; Agenda com imagens e abrindo em hoje.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.2/Cinema-TV-0.5.2-Chromecast-HD.apk",
-      "bytes": 72003224,
-      "sha256": "adba30d654570d8b9fed3fdd54f95778330ce9d0c619cb669d3caf28172eb502"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.3/Cinema-TV-0.5.3-Chromecast-HD.apk",
+      "bytes": 72012436,
+      "sha256": "59ad97cd950917377314dbfdf16b3e7cc550cecdcf536c01bb94414118ab0754"
     }
   }
 }
