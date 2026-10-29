@@ -1,0 +1,1046 @@
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -104,8 +104,8 @@
+         applicationId = "com.pedrovicq.cinema"
+         minSdk = 24
+         targetSdk = 36
+-        versionCode = 5
+-        versionName = "0.4.1-pilot"
++        versionCode = 6
++        versionName = "0.5.0-pilot"
+         buildConfigField("boolean", "PERSONAL_EDITION", "true")
+ 
+         buildConfigField("String", "PARENTAL_GUIDE_API_URL", "\"${localProperties.getProperty("PARENTAL_GUIDE_API_URL", "")}\"")
+--- /dev/null
++++ b/app/src/main/assets/personal/letterboxd-sync.js
+@@ -0,0 +1,151 @@
++/* Cinema TV web-session adapter. No native bridge or credentials leave this origin. */
++(function () {
++  'use strict';
++  const origin = 'https://letterboxd.com';
++  const fail = (code, retryAfter = 0) => { throw Object.assign(new Error(code), {code, retryAfter}); };
++  const lid = value => { if (typeof value !== 'string' || !/^[A-Za-z0-9]{1,40}$/.test(value)) fail('format'); return value; };
++  function accessStatus(response) {
++    if (response.status === 401) fail('reconnect');
++    if (response.status === 403) fail('verification');
++    if (response.status === 429) {
++      const raw = response.headers.get('Retry-After'), seconds = Number(raw);
++      const wait = raw && !Number.isFinite(seconds) ? Math.ceil((Date.parse(raw) - Date.now()) / 1000) : seconds;
++      fail('rate_limit', Math.max(60, Math.min(86400, Number.isFinite(wait) ? wait : 900)));
++    }
++  }
++  function csrf() {
++    const pair = document.cookie.split(';').map(x => x.trim()).find(x => x.startsWith('com.xk72.webparts.csrf='));
++    if (!pair) fail('reconnect');
++    return decodeURIComponent(pair.substring(pair.indexOf('=') + 1));
++  }
++  async function request(path, method = 'GET', body) {
++    if (location.origin !== origin || !path.startsWith('/') || path.startsWith('//')) fail('origin');
++    const controller = new AbortController();
++    const timer = setTimeout(() => controller.abort(), 20000);
++    try {
++      const headers = {Accept: 'application/json'};
++      if (method !== 'GET') { headers['Content-Type'] = 'application/json'; headers['x-csrf-token'] = csrf(); }
++      const response = await fetch(origin + path, {method, headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error',
++        signal: controller.signal, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
++      accessStatus(response);
++      if (!response.ok) fail(response.status >= 500 ? 'network' : 'format');
++      if (response.status === 204) return {};
++      if (!/application\/json/i.test(response.headers.get('Content-Type') || '')) fail('verification');
++      const text = await response.text(); if (text.length > 1500000) fail('limit');
++      return JSON.parse(text);
++    } catch (error) { if (error.code) throw error; fail('network'); }
++    finally { clearTimeout(timer); }
++  }
++  async function identity() {
++    const data = await request('/api/v0/me');
++    const member = data.member || data;
++    if (typeof member.username !== 'string') fail('reconnect');
++    if (member.username.toLowerCase() !== 'pedrovicq') fail('wrong_account');
++    return {id: lid(member.id), username: member.username, favorites: member.favoriteProductions ?? member.favoriteFilms};
++  }
++  function identifiers(film) {
++    let imdb = /^tt[0-9]{1,12}$/.test(film.imdbId || '') ? film.imdbId : null;
++    let tmdb = /^[0-9]{1,12}$/.test(String(film.tmdbId || '')) ? String(film.tmdbId) : null;
++    for (const link of film.links || []) {
++      try {
++        const url = new URL(link.url);
++        if (url.protocol !== 'https:') continue;
++        const i = /^(?:www\.)?imdb\.com$/.test(url.hostname) && /^\/title\/(tt[0-9]+)\/?$/.exec(url.pathname);
++        const t = /^(?:www\.)?themoviedb\.org$/.test(url.hostname) && /^\/movie\/([0-9]+)(?:-[^/]*)?\/?$/.exec(url.pathname);
++        if (i) imdb = i[1]; if (t) tmdb = t[1];
++      } catch (_) { /* Ignore malformed external links. */ }
++    }
++    return {imdb, tmdb};
++  }
++  function normalizeFilm(film) {
++    const ids = identifiers(film), id = ids.imdb || (ids.tmdb ? 'tmdb:' + ids.tmdb : null);
++    if (!id || typeof film.name !== 'string' || !film.name.trim()) fail('identity');
++    const sizes = (film.poster?.sizes || []).filter(x => typeof x.url === 'string' && x.url.startsWith('https://'));
++    sizes.sort((a,b) => Math.abs((a.width || 0) - 342) - Math.abs((b.width || 0) - 342));
++    return {id, name: film.name.slice(0,300), poster: sizes[0]?.url || null,
++      year: film.releaseYear ? String(film.releaseYear) : null, lid: lid(film.id)};
++  }
++  async function filmDetails(id) { return request('/api/v0/film/' + lid(id)); }
++  async function imdbDetails(id) {
++    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
++    try {
++      const response = await fetch(origin + '/imdb/' + id + '/', {credentials:'same-origin',cache:'no-store',signal:controller.signal});
++      accessStatus(response);
++      if (!response.ok) fail('network');
++      const url = new URL(response.url), match = /^\/film\/([a-z0-9-]+)\/$/.exec(url.pathname);
++      if (url.origin !== origin || url.username || url.password || !match) fail('identity');
++      if (response.body) await response.body.cancel();
++      const json = await request('/film/' + match[1] + '/json/');
++      return filmDetails(lid(json.lid));
++    } catch (error) { if (error.code) throw error; fail('network'); }
++    finally { clearTimeout(timer); }
++  }
++  async function relationship(id, member) {
++    const data = await request('/api/v0/film/' + lid(id) + '/me');
++    if (data.memberId !== member.id || (data.productionId || data.filmId) !== id || typeof data.watched !== 'boolean') fail('format');
++    const rating = data.rating == null ? null : Number(data.rating);
++    if (rating !== null && (!Number.isFinite(rating) || rating < .5 || rating > 5 || rating * 2 % 1)) fail('format');
++    return {watched: data.watched, halfStars: rating === null ? null : rating * 2};
++  }
++  async function run(command) {
++    const member = await identity(); // A fresh, authenticated identity for every operation, including every write.
++    if (command.op === 'identity') return {id: member.id, username: member.username};
++    if (command.op === 'resolve') {
++      const id = String(command.contentId || '').replace(/^imdb:/, '');
++      let details;
++      if (/^tmdb:[0-9]{1,12}$/.test(id)) details = await request('/api/v0/film/' + encodeURIComponent(id));
++      else if (/^tt[0-9]{1,12}$/.test(id)) details = await imdbDetails(id);
++      else fail('identity');
++      const resolved = normalizeFilm(details);
++      // IMDb is preferred for imports; a TMDB lookup must still prove the requested TMDB identity.
++      const identities = identifiers(details);
++      if (id.startsWith('tt') ? identities.imdb !== id : identities.tmdb !== id.substring(5)) fail('identity');
++      return resolved;
++    }
++    if (command.op === 'state') return relationship(lid(command.lid), member);
++    if (command.op === 'watch' || command.op === 'rate') {
++      const id = lid(command.lid);
++      if (command.op === 'rate' && (!Number.isInteger(command.halfStars) || command.halfStars < 1 || command.halfStars > 10)) fail('format');
++      await request('/api/v0/me/' + (command.op === 'watch' ? 'watch/' : 'rate/') + id, 'PATCH',
++        command.op === 'watch' ? {watched:true} : {rating:command.halfStars / 2});
++      return relationship(id, member);
++    }
++    if (command.op === 'diary' || command.op === 'createDiary') {
++      const id = lid(command.lid), date = command.date;
++      if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) fail('format');
++      if (command.op === 'createDiary') {
++        if (command.halfStars != null && (!Number.isInteger(command.halfStars) || command.halfStars < 1 || command.halfStars > 10)) fail('format');
++        const body = {productionId:id, diaryDetails:{diaryDate:date, rewatch:command.rewatch === true}};
++        if (command.halfStars != null) body.rating = command.halfStars / 2;
++        // No review, tags, visibility or likes are changed. The account's privacy default applies.
++        const result = await request('/api/v0/production-log-entries', 'POST', body);
++        return {id: (result.data || result).id || null};
++      }
++      const [year,month,day] = date.split('-');
++      const query = new URLSearchParams({film:id,member:member.id,memberRelationship:'Owner',year,month,day,perPage:'100',where:'HasDiaryDate'});
++      const result = await request('/api/v0/log-entries?' + query);
++      if (!Array.isArray(result.items) || result.next) fail('incomplete');
++      return {entries:result.items.map(entry => {
++        const film = entry.production || entry.film;
++        if (entry.owner?.id !== member.id || film?.id !== id || !entry.diaryDetails?.diaryDate) fail('format');
++        const rating = entry.rating;
++        if (rating != null && (typeof rating !== 'number' || rating < .5 || rating > 5 || rating * 2 % 1)) fail('format');
++        return {id:lid(entry.id), date:entry.diaryDetails.diaryDate, halfStars:rating == null ? null : rating * 2};
++      })};
++    }
++    if (command.op === 'watchlistPage') {
++      const query = new URLSearchParams({perPage:'50'});
++      if (command.cursor) { if (typeof command.cursor !== 'string' || command.cursor.length > 2048) fail('format'); query.set('cursor',command.cursor); }
++      const result = await request('/api/v0/member/' + member.id + '/watchlist?' + query);
++      if (!Array.isArray(result.items) || result.items.length > 50 || (result.next != null && typeof result.next !== 'string')) fail('format');
++      return {ids:result.items.map(x => lid((x.film || x.production || x).id)), next:result.next || null};
++    }
++    if (command.op === 'details') return normalizeFilm(await filmDetails(command.lid));
++    if (command.op === 'favorites') {
++      if (!Array.isArray(member.favorites) || member.favorites.length > 4) fail('format');
++      return {ids:member.favorites.map(x => lid(typeof x === 'string' ? x : x.id))};
++    }
++    fail('operation');
++  }
++  window.CinemaLetterboxd = {run};
++})();
+--- a/app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt
+@@ -49,6 +49,9 @@
+     private val pendingDeleteKeysKey = stringSetPreferencesKey("library_pending_deletes")
+     private val mutationRevisionKey = longPreferencesKey("library_mutation_revision")
+     private val personalQueueKey = stringPreferencesKey("personal_movie_queue_v1")
++    private val letterboxdFavoritesKey = stringPreferencesKey("letterboxd_favorites_v1")
++    private val letterboxdImportedKey = stringSetPreferencesKey("letterboxd_imported_v1")
++    private val letterboxdDismissedKey = stringSetPreferencesKey("letterboxd_dismissed_v1")
+ 
+     private fun store(profileId: Int = profileManager.activeProfileId.value) =
+         factory.get(profileId, FEATURE)
+@@ -69,8 +72,28 @@
+     fun observePersonalLibrary(profileId: Int): Flow<PersonalLibraryState> =
+         store(profileId).data.map { preferences ->
+             val items = preferences.toLibrarySyncState().items
+-            PersonalLibraryState(profileId, items, sanitizePersonalQueue(items, preferences.readPersonalQueue()), true)
+-        }
++            val favorites = runCatching { gson.fromJson(preferences[letterboxdFavoritesKey] ?: "[]", Array<SavedLibraryItem>::class.java).toList() }.getOrDefault(emptyList())
++            PersonalLibraryState(profileId, items, sanitizePersonalQueue(items, preferences.readPersonalQueue()), true, letterboxdFavorites = favorites)
++        }
++
++    /** Additive import preserves manual queue, local lists and titles dismissed on this device. */
++    suspend fun importLetterboxd(watchlist: List<SavedLibraryItem>, favorites: List<SavedLibraryItem>, profileId: Int) {
++        require(watchlist.size <= 2000 && favorites.size <= 4 && (watchlist + favorites).all { it.type == "movie" })
++        store(profileId).edit { preferences ->
++            var current = preferences.toLibrarySyncState()
++            val incoming = watchlist.mapTo(mutableSetOf()) { it.id }
++            val dismissed = preferences[letterboxdDismissedKey].orEmpty().intersect(incoming)
++            for (item in watchlist) {
++                if (item.id !in dismissed && current.items.none { it.type == "movie" && it.id.removePrefix("imdb:") == item.id.removePrefix("imdb:") }) {
++                    current = LibrarySyncReducer.upsertLocal(current, item, System.currentTimeMillis())
++                }
++            }
++            preferences.writeLibrarySyncState(current)
++            preferences[letterboxdImportedKey] = incoming
++            preferences[letterboxdDismissedKey] = dismissed
++            preferences[letterboxdFavoritesKey] = gson.toJson(favorites)
++        }
++    }
+ 
+     suspend fun setPersonalQueueMembership(item: SavedLibraryItem, included: Boolean, profileId: Int) {
+         require(item.type.equals("movie", true)) { "Only movies belong in the priority queue" }
+@@ -186,6 +209,9 @@
+         profileId: Int = profileManager.activeProfileId.value
+     ) {
+         store(profileId).edit { preferences ->
++            if (itemType.equals("movie", true) && itemId in preferences[letterboxdImportedKey].orEmpty()) {
++                preferences[letterboxdDismissedKey] = preferences[letterboxdDismissedKey].orEmpty() + itemId
++            }
+             val updated = LibrarySyncReducer.deleteLocal(
+                 state = preferences.toLibrarySyncState(),
+                 contentId = itemId,
+--- a/app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt
++++ b/app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt
+@@ -6,7 +6,8 @@
+     val items: List<SavedLibraryItem> = emptyList(),
+     val queueKeys: List<String> = emptyList(),
+     val ready: Boolean = false,
+-    val history: List<WatchedItem> = emptyList()
++    val history: List<WatchedItem> = emptyList(),
++    val letterboxdFavorites: List<SavedLibraryItem> = emptyList()
+ ) {
+     val queuedMovies: List<SavedLibraryItem>
+         get() {
+--- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
+@@ -21,6 +21,7 @@
+ import androidx.navigation.NavType
+ import androidx.navigation.compose.NavHost
+ import androidx.navigation.compose.composable
++import androidx.navigation.compose.currentBackStackEntryAsState
+ import androidx.navigation.navArgument
+ import com.nuvio.tv.core.build.AppFeaturePolicy
+ import com.nuvio.tv.domain.model.ExperienceMode
+@@ -62,6 +63,11 @@
+     startDestination: String = Screen.Home.route,
+     hideBuiltInHeaders: Boolean = false
+ ) {
++    if (com.nuvio.tv.BuildConfig.PERSONAL_EDITION) {
++        val entry by navController.currentBackStackEntryAsState()
++        val route = entry?.destination?.route
++        com.nuvio.tv.ui.personal.LetterboxdSyncHost(route != null && !route.startsWith("player/") && !route.startsWith("stream/"))
++    }
+     PlaybackAvailabilityProvider {
+         PlaybackNavHost(navController, startDestination, hideBuiltInHeaders)
+     }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaControlCenter.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaControlCenter.kt
+@@ -58,6 +58,6 @@
+                 }
+             }
+         }
+-        if (showLetterboxd) CinemaLetterboxdSettings { showLetterboxd = false }
++        if (showLetterboxd) CinemaLetterboxdSettings(profileId = viewModel.activeProfileId()) { showLetterboxd = false }
+     }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaLetterboxdSettings.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaLetterboxdSettings.kt
+@@ -1,6 +1,8 @@
+ package com.nuvio.tv.ui.personal
+ 
+ import androidx.compose.foundation.background
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.foundation.verticalScroll
+ import androidx.compose.foundation.focusable
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.lazy.LazyColumn
+@@ -24,13 +26,17 @@
+ import java.util.Locale
+ 
+ @Composable
+-internal fun CinemaLetterboxdSettings(onDismiss: () -> Unit) {
++internal fun CinemaLetterboxdSettings(profileId: Int = 1, onDismiss: () -> Unit) {
+     val context = LocalContext.current
+     val store = remember { LetterboxdConnectionStore(context) }
++    val automation = remember { LetterboxdSyncStore(context) }
++    var sync by remember { mutableStateOf(automation.state()) }
++    var entries by remember { mutableStateOf(automation.entries(profileId).reversed()) }
+     var session by remember { mutableStateOf(store.session()) }
+     var pending by remember { mutableStateOf(store.pending()) }
+     val first = remember { FocusRequester() }
+     LaunchedEffect(store) { store.observeChanges().collect { session = store.session(); pending = store.pending() } }
++    LaunchedEffect(automation, profileId) { automation.observe().collect { sync = automation.state(); entries = automation.entries(profileId).reversed() } }
+     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+         val inputMode = LocalInputModeManager.current
+         val window = LocalWindowInfo.current
+@@ -40,28 +46,35 @@
+             first.requestFocus()
+         }
+         Row(Modifier.fillMaxSize().background(CinemaStyle.Canvas).padding(42.dp), horizontalArrangement = Arrangement.spacedBy(36.dp)) {
+-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(17.dp)) {
++            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                 Text("Seu cinema.\nSua comunidade.", fontFamily = CinemaDisplay, fontSize = 31.sp, lineHeight = 36.sp, color = CinemaStyle.Ink)
+                 Text("Letterboxd · $LETTERBOXD_ACCOUNT", fontFamily = CinemaUi, fontSize = 14.sp, color = CinemaStyle.Green)
+-                Text(session.message ?: "Conecte sua conta para testar a sessão no aparelho. Suas avaliações continuam guardadas neste app.", fontFamily = CinemaUi, fontSize = 13.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
++                Text(sync.message ?: session.message ?: "Entre uma vez com pedrovicq. Ao voltar, o app importa Quero ver e favoritos e envia os filmes concluídos com suas notas.", fontFamily = CinemaUi, fontSize = 13.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
+                 CinemaAction(if (session.verifiedAt > 0) "Verificar conexão" else "Conectar Letterboxd", true, Modifier.focusRequester(first)) {
+-                    context.startActivity(LetterboxdConnectionActivity.intent(context))
++                    context.startActivity(LetterboxdConnectionActivity.intent(context, profileId = profileId))
+                 }
+-                Text("Esta versão testa login e leitura. O envio automático de notas e a importação de listas ainda não estão ativos.", fontFamily = CinemaUi, fontSize = 12.sp, lineHeight = 18.sp, color = CinemaStyle.Muted)
++                CinemaAction(if (sync.enabled && sync.profileId == profileId) "Pausar sincronização" else "Ativar sincronização", false,
++                    enabled = session.verifiedAt > 0 && session.account.equals(LETTERBOXD_ACCOUNT, true)) {
++                    automation.enable(profileId, !(sync.enabled && sync.profileId == profileId))
++                }
++                CinemaAction("Tentar sincronizar agora", false, enabled = sync.enabled && sync.profileId == profileId) { automation.retry() }
++                Text("Sincroniza com o app aberto, fora da reprodução. A fila manual é preservada. Login ou verificações exigidos pelo site aparecem aqui.", fontFamily = CinemaUi, fontSize = 12.sp, lineHeight = 18.sp, color = CinemaStyle.Muted)
+                 CinemaAction("Voltar", false, onClick = onDismiss)
+             }
+             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+-                Text("Avaliações guardadas", fontFamily = CinemaDisplay, fontSize = 24.sp, color = CinemaStyle.Ink)
+-                Text(if (pending.size == 1) "1 avaliação pendente de envio" else "${pending.size} avaliações pendentes de envio", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted)
+-                if (pending.isEmpty()) Text("As próximas avaliações feitas ao concluir filmes aparecerão aqui.", fontFamily = CinemaUi, fontSize = 13.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
++                Text("Seus registros", fontFamily = CinemaDisplay, fontSize = 24.sp, color = CinemaStyle.Ink)
++                val count = entries.count { it.optString("letterboxdStatus") != "synced" }
++                Text(if (count == 1) "1 avaliação pendente de envio" else "$count avaliações pendentes de envio", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted)
++                if (entries.isEmpty()) Text("As próximas avaliações feitas ao concluir filmes aparecerão aqui.", fontFamily = CinemaUi, fontSize = 13.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
+                 LazyColumn(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+-                    items(pending, key = { it.sessionId }) { entry ->
++                    items(entries.take(100), key = { it.getString("sessionId") }) { entry ->
+                         var focused by remember { mutableStateOf(false) }
+                         Column(Modifier.fillMaxWidth().background(if (focused) CinemaStyle.Green.copy(alpha = .12f) else CinemaStyle.Canvas)
+                             .onFocusChanged { focused = it.isFocused }.focusable().padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+-                            Text(entry.title, fontFamily = CinemaUi, fontSize = 16.sp, color = CinemaStyle.Ink, maxLines = 2)
+-                            Text("${letterboxdStars(entry.halfStars)} · ${SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(Date(entry.watchedAt))}", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Green)
+-                            Text("Salvo no app · aguardando envio", fontFamily = CinemaUi, fontSize = 11.sp, color = CinemaStyle.Muted)
++                            Text(entry.optString("title"), fontFamily = CinemaUi, fontSize = 16.sp, color = CinemaStyle.Ink, maxLines = 2)
++                            Text("${letterboxdStars(if (entry.isNull("halfStars")) null else entry.optInt("halfStars"))} · ${SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR")).format(Date(entry.optLong("watchedAt")))}", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Green)
++                            val status = entry.optString("letterboxdStatus")
++                            Text(when(status) { "synced" -> "Sincronizado · conferido no Letterboxd"; "pending", "pending_connection" -> "Salvo no app · aguardando envio"; else -> letterboxdSyncMessage(status) }, fontFamily = CinemaUi, fontSize = 11.sp, lineHeight = 16.sp, color = CinemaStyle.Muted)
+                         }
+                     }
+                 }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt
+@@ -138,5 +138,7 @@
+         val saved = library.items.filter { it.type == "movie" && "movie:${it.id}" !in alreadyShown }.sortedByDescending { it.addedAt }
+         if(saved.isNotEmpty()) rows += CinemaRow("personal-watchlist-$tab", "Quero ver", saved.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
+     }
++    if (tab == 1 && library.letterboxdFavorites.isNotEmpty()) rows += CinemaRow("letterboxd-favorites", "Seus favoritos no Letterboxd",
++        library.letterboxdFavorites.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
+     return rows.filter { it.titles.isNotEmpty() }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionActivity.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionActivity.kt
+@@ -29,7 +29,7 @@
+ import org.json.JSONObject
+ import org.json.JSONTokener
+ 
+-/** Deliberately no JavaScript interface, password capture, cookie export or remote write. */
++/** Visible login only; automatic writes use a separate short-lived session after this activity closes. */
+ class LetterboxdConnectionActivity : ComponentActivity() {
+     private var browser: WebView? = null
+     private lateinit var store: LetterboxdConnectionStore
+@@ -73,7 +73,7 @@
+                         TextView(context).apply { text = "Conexão indisponível" }
+                     }
+                 })
+-                Text("${provider?.packageName ?: "WebView"} ${provider?.versionName.orEmpty()} · Protótipo de conexão e leitura. Avaliações ainda não são enviadas.", fontFamily = CinemaUi, fontSize = 10.sp, color = CinemaStyle.Muted)
++                Text("${provider?.packageName ?: "WebView"} ${provider?.versionName.orEmpty()} · Após entrar e verificar a sessão, volte ao app. A sincronização automática pode ser pausada em Ajustes → Letterboxd.", fontFamily = CinemaUi, fontSize = 10.sp, color = CinemaStyle.Muted)
+             }
+         } }
+     }
+@@ -138,6 +138,8 @@
+             val identity = parseLetterboxdSessionProbe(value)
+             if (identity != null) {
+                 store.observedAccount(identity.takeIf { it.isNotEmpty() })
++                val syncProfile = intent.getIntExtra("enableSyncProfile", -1)
++                if (identity.equals(LETTERBOXD_ACCOUNT, true) && syncProfile >= 0) LetterboxdSyncStore(this).enable(syncProfile, true)
+                 CookieManager.getInstance().flush()
+                 message = store.session().message.orEmpty()
+             } else message = "A sessão ainda não pôde ser identificada. Conclua o login ou a verificação do site e tente novamente."
+@@ -169,8 +171,9 @@
+     }
+ 
+     companion object {
+-        internal fun intent(context: Context, contentId: String? = null) = Intent(context, LetterboxdConnectionActivity::class.java).apply {
++        internal fun intent(context: Context, contentId: String? = null, profileId: Int? = null) = Intent(context, LetterboxdConnectionActivity::class.java).apply {
+             contentId?.takeIf { letterboxdLookupUrl(it) != null }?.let { putExtra("filmId", it) }
++            profileId?.let { putExtra("enableSyncProfile", it) }
+         }
+     }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionStore.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionStore.kt
+@@ -21,11 +21,11 @@
+     fun observedAccount(account: String?) {
+         val correct = account?.equals(LETTERBOXD_ACCOUNT, true) == true
+         prefs.edit().putString("account", account?.take(40)).putLong("verifiedAt", if (correct) System.currentTimeMillis() else 0)
+-            .putString("message", when { correct -> "Sessão de $LETTERBOXD_ACCOUNT identificada. O envio de avaliações ainda está em validação."; account != null -> "Esta sessão pertence a $account. Entre com $LETTERBOXD_ACCOUNT."; else -> "Entre no site para verificar sua sessão." }).apply()
++            .putString("message", when { correct -> "Sessão de $LETTERBOXD_ACCOUNT identificada. A sincronização confere a conta novamente antes de enviar."; account != null -> "Esta sessão pertence a $account. Entre com $LETTERBOXD_ACCOUNT."; else -> "Entre no site para verificar sua sessão." }).apply()
+     }
+     fun pending(): List<LetterboxdPending> = diary.all.values.mapNotNull { raw -> runCatching {
+         val data = JSONObject(raw as String)
+-        if (data.optString("letterboxdStatus") !in listOf("pending_connection", "pending", "awaiting_verification")) return@runCatching null
++        if (data.optString("letterboxdStatus") in listOf("synced", "local_only")) return@runCatching null
+         LetterboxdPending(data.getString("sessionId"), data.getString("contentId"), data.getString("title"),
+             if (data.isNull("halfStars")) null else data.getInt("halfStars").takeIf { it in 1..10 }, data.getLong("watchedAt"))
+     }.getOrNull() }.sortedByDescending { it.watchedAt }
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncEngine.kt
+@@ -0,0 +1,97 @@
++package com.nuvio.tv.ui.personal
++
++import com.nuvio.tv.domain.model.SavedLibraryItem
++import kotlinx.coroutines.CancellationException
++import kotlinx.coroutines.currentCoroutineContext
++import kotlinx.coroutines.ensureActive
++import org.json.JSONArray
++import org.json.JSONObject
++
++internal class LetterboxdSyncEngine(
++    private val store: LetterboxdSyncStore,
++    private val remote: LetterboxdRemote,
++    private val profile: Int,
++    private val allowed: () -> Boolean,
++    private val importLists: suspend (List<SavedLibraryItem>, List<SavedLibraryItem>) -> Unit,
++    private val now: () -> Long = System::currentTimeMillis
++) {
++    private suspend fun call(op: String, build: JSONObject.() -> Unit = {}): JSONObject {
++        currentCoroutineContext().ensureActive()
++        check(allowed()) { "A sincronização foi pausada ou o perfil mudou." }
++        return remote.call(JSONObject().put("op", op).apply(build))
++    }
++    suspend fun sync() {
++        val identity = call("identity")
++        if (!identity.getString("username").equals(LETTERBOXD_ACCOUNT, true)) throw LetterboxdSyncFailure("wrong_account")
++        var hadPending = false
++        for (entry in store.pending(profile).filter { it.optLong("letterboxdRetryAt") <= now() }.take(12)) {
++            if (entry.optString("letterboxdStatus") in setOf("conflict", "identity", "format")) { hadPending = true; continue }
++            try { syncEntry(entry) }
++            catch (cancelled: CancellationException) { throw cancelled }
++            catch (error: LetterboxdSyncFailure) {
++                entry.put("letterboxdStatus", error.code).put("letterboxdMessage", letterboxdSyncMessage(error.code))
++                    .put("letterboxdRetryAt", now() + 30 * 60_000); store.update(entry)
++                if (error.code in setOf("conflict", "identity", "format", "uncertain")) hadPending = true else throw error
++            }
++        }
++        val shouldImport = now() - store.state().lastImport >= 6 * 60 * 60_000L || store.state().lastImport == 0L
++        if (shouldImport) importSnapshot()
++        store.success(now(), shouldImport)
++        if (hadPending || store.pending(profile).isNotEmpty()) store.message("Sincronização conferida. Há registros pendentes; veja o estado de cada filme abaixo.")
++    }
++    private suspend fun syncEntry(entry: JSONObject) {
++        val id = entry.getString("contentId")
++        if (letterboxdLookupUrl(id) == null) throw LetterboxdSyncFailure("identity")
++        val film = call("resolve") { put("contentId", id) }
++        val lid = film.getString("lid")
++        val date = letterboxdEntryDate(entry)
++        val half = if (entry.isNull("halfStars")) null else entry.getInt("halfStars").also { if (it !in 1..10) throw LetterboxdSyncFailure("format") }
++        val before = call("state") { put("lid", lid) }
++        var logs = call("diary") { put("lid", lid); put("date", date) }.getJSONArray("entries")
++        if (logs.length() == 0 && !entry.optBoolean("letterboxdDiaryAttempted")) {
++            // Durable before POST: after a timeout or process death, reconcile instead of POSTing again.
++            entry.put("watchedDate", date).put("letterboxdDiaryAttempted", true).put("letterboxdStatus", "awaiting_verification")
++            store.update(entry)
++            call("createDiary") { put("lid", lid); put("date", date); put("halfStars", half ?: JSONObject.NULL); put("rewatch", before.getBoolean("watched")) }
++            logs = call("diary") { put("lid", lid); put("date", date) }.getJSONArray("entries")
++        }
++        if (logs.length() == 0) throw LetterboxdSyncFailure("uncertain")
++        val matches = (0 until logs.length()).map { logs.getJSONObject(it) }.filter {
++            it.getString("date") == date && (if (it.isNull("halfStars")) null else it.getInt("halfStars")) == half
++        }
++        if (matches.size != 1) throw LetterboxdSyncFailure("conflict")
++        val receipt = matches.single().getString("id")
++        if (store.receiptUsed(receipt, entry.getString("sessionId"))) throw LetterboxdSyncFailure("conflict")
++        if (!before.getBoolean("watched")) call("watch") { put("lid", lid) }
++        if (half != null && (before.isNull("halfStars") || before.getInt("halfStars") != half)) call("rate") { put("lid", lid); put("halfStars", half) }
++        val after = call("state") { put("lid", lid) }
++        if (!after.getBoolean("watched") || (half != null && (after.isNull("halfStars") || after.getInt("halfStars") != half))) throw LetterboxdSyncFailure("uncertain")
++        entry.put("letterboxdStatus", "synced").put("letterboxdDiaryId", receipt).put("letterboxdSyncedAt", now())
++            .put("letterboxdMessage", "Assistido, diário e nota conferidos no Letterboxd.")
++        store.update(entry)
++    }
++
++    private suspend fun importSnapshot() {
++        val ids = linkedSetOf<String>(); val cursors = mutableSetOf<String>(); var cursor: String? = null
++        do {
++            val page = call("watchlistPage") { cursor?.let { put("cursor", it) } }
++            val list = page.getJSONArray("ids")
++            for (i in 0 until list.length()) ids += list.getString(i)
++            if (ids.size > 2000) throw LetterboxdSyncFailure("limit")
++            cursor = page.optString("next").takeUnless { it.isBlank() || it == "null" }
++            if (cursor != null && (!cursors.add(cursor) || cursors.size > 40)) throw LetterboxdSyncFailure("incomplete")
++        } while (cursor != null)
++        val favoriteIds = call("favorites").getJSONArray("ids").let { a -> (0 until a.length()).map { a.getString(it) } }
++        if (favoriteIds.size > 4) throw LetterboxdSyncFailure("format")
++        val films = mutableMapOf<String, SavedLibraryItem>()
++        for (id in ids + favoriteIds) {
++            val details = store.cachedFilm(id, now()) ?: call("details") { put("lid", id) }.also { store.cacheFilm(id, it, now()) }
++            films[id] = importedLetterboxdFilm(details)
++        }
++        // Import only after every page and film identity has been validated. Never erase lists after a failed page.
++        val locallyCompleted = store.entries(profile).map { it.getString("contentId").removePrefix("imdb:") }.toSet()
++        val watchlist = ids.map { films.getValue(it) }.filter { it.id.removePrefix("imdb:") !in locallyCompleted }
++        if (!allowed()) throw CancellationException("Profile changed")
++        importLists(watchlist, favoriteIds.map { films.getValue(it) })
++    }
++}
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncHost.kt
+@@ -0,0 +1,66 @@
++package com.nuvio.tv.ui.personal
++
++import android.content.Context
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.ui.platform.LocalContext
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.Lifecycle
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.compose.LocalLifecycleOwner
++import androidx.lifecycle.repeatOnLifecycle
++import com.nuvio.tv.core.profile.ProfileManager
++import com.nuvio.tv.data.local.LibraryPreferences
++import dagger.hilt.android.lifecycle.HiltViewModel
++import dagger.hilt.android.qualifiers.ApplicationContext
++import javax.inject.Inject
++import kotlinx.coroutines.*
++import kotlinx.coroutines.sync.Mutex
++
++@HiltViewModel
++class LetterboxdSyncViewModel @Inject constructor(
++    @ApplicationContext private val context: Context,
++    private val profiles: ProfileManager,
++    private val library: LibraryPreferences
++) : ViewModel() {
++    private companion object { val syncLock = Mutex() }
++    private val store = LetterboxdSyncStore(context)
++    internal suspend fun syncIfDue(host: Context) {
++        if (!syncLock.tryLock()) return
++        try { syncLocked(host) } finally { syncLock.unlock() }
++    }
++    private suspend fun syncLocked(host: Context) {
++        val profile = profiles.activeProfileId.value
++        val state = store.state(); val now = System.currentTimeMillis()
++        if (!state.enabled || state.profileId != profile || state.retryAt > now || !store.hasWork(profile, now)) return
++        val remote = LetterboxdWebSession(host)
++        try {
++            store.message("Sincronizando com o Letterboxd…")
++            withTimeout(180_000) {
++                remote.open()
++                withContext(Dispatchers.IO) {
++                    LetterboxdSyncEngine(store, remote, profile,
++                        allowed = { profiles.activeProfileId.value == profile && store.state().let { it.enabled && it.profileId == profile } },
++                        importLists = { saved, favorites -> library.importLetterboxd(saved, favorites, profile) }).sync()
++                }
++            }
++        } catch (timeout: TimeoutCancellationException) {
++            if (currentCoroutineContext().isActive) store.failure(LetterboxdSyncFailure("network"), System.currentTimeMillis()) else throw timeout
++        } catch (cancelled: CancellationException) { throw cancelled }
++        catch (error: Exception) { store.failure(error, System.currentTimeMillis()) }
++        finally { remote.close() }
++    }
++}
++
++/** Starts after navigation settles; leaving foreground or entering playback cancels and destroys the WebView. */
++@Composable
++internal fun LetterboxdSyncHost(allowed: Boolean, viewModel: LetterboxdSyncViewModel = hiltViewModel()) {
++    val context = LocalContext.current
++    val owner = LocalLifecycleOwner.current
++    LaunchedEffect(allowed, owner, context) {
++        if (allowed) owner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
++            delay(3_000)
++            while (isActive) { viewModel.syncIfDue(context); delay(5_000) }
++        }
++    }
++}
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncStore.kt
+@@ -0,0 +1,93 @@
++package com.nuvio.tv.ui.personal
++
++import android.content.Context
++import android.content.SharedPreferences
++import com.nuvio.tv.domain.model.SavedLibraryItem
++import com.nuvio.tv.domain.model.PosterShape
++import kotlinx.coroutines.channels.awaitClose
++import kotlinx.coroutines.flow.callbackFlow
++import kotlinx.coroutines.flow.conflate
++import org.json.JSONObject
++import java.time.Instant
++import java.time.ZoneId
++
++internal data class LetterboxdSyncState(val enabled: Boolean, val profileId: Int, val message: String?, val lastSuccess: Long, val lastImport: Long, val retryAt: Long)
++internal class LetterboxdSyncStore(context: Context) {
++    private val prefs = context.getSharedPreferences("letterboxd_automation", Context.MODE_PRIVATE)
++    private val diary = context.getSharedPreferences("personal_diary", Context.MODE_PRIVATE)
++    private val metadata = context.getSharedPreferences("letterboxd_metadata", Context.MODE_PRIVATE)
++    fun cachedFilm(lid: String, now: Long): JSONObject? = runCatching {
++        val cached = JSONObject(metadata.getString(lid, null) ?: return null)
++        if (now - cached.getLong("time") >= 7 * 24 * 60 * 60_000L) return null
++        cached.getJSONObject("film").also { importedLetterboxdFilm(it) }
++    }.getOrNull()
++    fun cacheFilm(lid: String, film: JSONObject, now: Long) {
++        importedLetterboxdFilm(film)
++        require(lid.matches(Regex("[A-Za-z0-9]{1,40}")) && film.toString().length <= 4096)
++        val edit = metadata.edit()
++        if (!metadata.contains(lid) && metadata.all.size >= 2100) {
++            metadata.all.entries.sortedBy { runCatching { JSONObject(it.value as String).optLong("time") }.getOrDefault(0) }
++                .take(100).forEach { edit.remove(it.key) }
++        }
++        check(edit.putString(lid, JSONObject().put("time", now).put("film", film).toString()).commit())
++    }
++    fun state() = LetterboxdSyncState(prefs.getBoolean("enabled", false), prefs.getInt("profile", 1), prefs.getString("message", null),
++        prefs.getLong("success", 0), prefs.getLong("import", 0), prefs.getLong("retryAt", 0))
++    fun enable(profile: Int, enabled: Boolean) { check(prefs.edit().putBoolean("enabled", enabled).putInt("profile", profile).putLong("retryAt", 0)
++        .putString("message", if (enabled) "Sincronização automática ativada. A sessão será conferida antes de enviar." else "Sincronização pausada. Registros locais preservados.").commit()) }
++    fun retry() {
++        prefs.edit().putLong("retryAt", 0).putLong("import", 0).apply()
++        for (entry in pending(state().profileId)) {
++            entry.put("letterboxdStatus", "pending").put("letterboxdRetryAt", 0); update(entry)
++        }
++    }
++    fun message(value: String) { prefs.edit().putString("message", value).apply() }
++    fun success(now: Long, imported: Boolean) { val edit = prefs.edit().putLong("success", now).putLong("retryAt", 0).putInt("failures", 0)
++        .putString("message", "Última sincronização confirmada no Letterboxd."); if (imported) edit.putLong("import", now); edit.apply() }
++    fun failure(error: Throwable, now: Long) {
++        val code = (error as? LetterboxdSyncFailure)?.code ?: "network"
++        val count = (prefs.getInt("failures", 0) + 1).coerceAtMost(8)
++        val delay = maxOf((error as? LetterboxdSyncFailure)?.retryAfterSeconds?.times(1000) ?: 0,
++            if (code in setOf("reconnect", "wrong_account", "verification", "format", "webview")) 6 * 60 * 60_000L else (60_000L shl count).coerceAtMost(6 * 60 * 60_000L))
++        prefs.edit().putInt("failures", count).putLong("retryAt", now + delay).putString("message", letterboxdSyncMessage(code)).apply()
++    }
++    fun entries(profile: Int): List<JSONObject> = diary.all.values.mapNotNull { raw -> runCatching { JSONObject(raw as String) }.getOrNull() }
++        .filter { it.optInt("profileId", 1) == profile && it.optString("sessionId").isNotBlank() }
++        .sortedBy { it.optLong("watchedAt") }
++    fun pending(profile: Int) = entries(profile).filter { it.optString("letterboxdStatus") != "synced" && it.optString("letterboxdStatus") != "local_only" }
++    fun hasWork(profile: Int, now: Long): Boolean = state().lastImport == 0L || now - state().lastImport >= 6 * 60 * 60_000L ||
++        pending(profile).any { it.optString("letterboxdStatus") !in setOf("conflict", "identity", "format") && it.optLong("letterboxdRetryAt") <= now }
++    fun update(entry: JSONObject) { check(diary.edit().putString(entry.getString("sessionId"), entry.toString()).commit()) { "Não foi possível salvar o estado da sincronização." } }
++    fun receiptUsed(receipt: String, sessionId: String) = diary.all.values.any { raw -> runCatching { JSONObject(raw as String).let {
++        it.optString("sessionId") != sessionId && it.optString("letterboxdDiaryId") == receipt
++    } }.getOrDefault(false) }
++    fun observe() = callbackFlow {
++        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> trySend(Unit) }
++        prefs.registerOnSharedPreferenceChangeListener(listener); diary.registerOnSharedPreferenceChangeListener(listener); trySend(Unit)
++        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener); diary.unregisterOnSharedPreferenceChangeListener(listener) }
++    }.conflate()
++}
++
++internal fun letterboxdSyncMessage(code: String) = when(code) {
++    "reconnect" -> "Reconecte o Letterboxd. Seus registros continuam salvos para envio."
++    "wrong_account" -> "Entre com pedrovicq. Nenhum registro será enviado para outra conta."
++    "verification" -> "O Letterboxd pediu uma verificação. Abra Conectar e conclua a etapa no site."
++    "uncertain" -> "Envio ainda não confirmado. O app vai conferir novamente sem duplicar o diário."
++    "conflict" -> "Existe um registro diferente para esse filme e data. O app preservou o registro do Letterboxd."
++    "rate_limit" -> "O Letterboxd pediu uma pausa. A sincronização retomará após o intervalo indicado."
++    "identity" -> "Não foi possível confirmar a identidade de um filme. O registro local foi preservado."
++    "webview" -> "O componente web do Android não ficou disponível. Seus registros estão preservados."
++    "format", "incomplete", "limit", "origin" -> "A resposta do Letterboxd não pôde ser validada. Listas e registros anteriores foram preservados."
++    else -> "Sem conexão com o Letterboxd agora. O app tentará novamente sem perder seus registros."
++}
++
++internal fun letterboxdEntryDate(entry: JSONObject): String = entry.optString("watchedDate").takeIf {
++    runCatching { java.time.LocalDate.parse(it) }.isSuccess
++} ?: Instant.ofEpochMilli(entry.getLong("watchedAt")).atZone(ZoneId.systemDefault()).toLocalDate().toString()
++
++internal fun importedLetterboxdFilm(json: JSONObject): SavedLibraryItem {
++    val id = json.getString("id"); require(letterboxdLookupUrl(id) != null)
++    val name = json.getString("name"); require(name.isNotBlank() && name.length <= 300)
++    return SavedLibraryItem(id, "movie", name, json.optString("poster").takeIf { it.startsWith("https://") }, PosterShape.POSTER,
++        null, null, json.optString("year").takeIf { it.matches(Regex("[0-9]{4}")) }, null, emptyList(), null)
++}
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdWebSession.kt
+@@ -0,0 +1,103 @@
++package com.nuvio.tv.ui.personal
++
++import android.annotation.SuppressLint
++import android.content.Context
++import android.os.Build
++import android.webkit.*
++import kotlinx.coroutines.*
++import org.json.JSONObject
++import org.json.JSONTokener
++import java.util.UUID
++import kotlin.coroutines.resume
++
++internal class LetterboxdSyncFailure(val code: String, val retryAfterSeconds: Long = 0) : Exception(code)
++
++internal interface LetterboxdRemote {
++    suspend fun call(command: JSONObject): JSONObject
++}
++
++/** Exists only during a foreground synchronization, never alongside the player. */
++@SuppressLint("SetJavaScriptEnabled")
++internal class LetterboxdWebSession(private val context: Context) : LetterboxdRemote {
++    private var web: WebView? = null
++    private var ready: CompletableDeferred<Unit>? = null
++
++    suspend fun open() = withContext(Dispatchers.Main.immediate) {
++        if (Build.VERSION.SDK_INT >= 26 && WebView.getCurrentWebViewPackage() == null) throw LetterboxdSyncFailure("webview")
++        val loaded = CompletableDeferred<Unit>(); ready = loaded
++        web = WebView(context).apply {
++            settings.javaScriptEnabled = true
++            settings.domStorageEnabled = true
++            settings.cacheMode = WebSettings.LOAD_NO_CACHE
++            settings.allowFileAccess = false; settings.allowContentAccess = false
++            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
++            settings.javaScriptCanOpenWindowsAutomatically = false
++            settings.setSupportMultipleWindows(false)
++            if (Build.VERSION.SDK_INT >= 26) settings.safeBrowsingEnabled = true
++            CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
++            webChromeClient = object : WebChromeClient() {
++                override fun onPermissionRequest(request: PermissionRequest) = request.deny()
++            }
++            webViewClient = object : WebViewClient() {
++                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
++                    if (request.isForMainFrame) !trustedLetterboxdUrl(request.url.toString()) else request.url.scheme != "https"
++                override fun onPageFinished(view: WebView, url: String?) {
++                    if (trustedLetterboxdUrl(url)) loaded.complete(Unit)
++                    else loaded.completeExceptionally(LetterboxdSyncFailure("origin"))
++                }
++                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
++                    if (request.isForMainFrame) loaded.completeExceptionally(LetterboxdSyncFailure("network"))
++                }
++                override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
++                    if (request.isForMainFrame) loaded.completeExceptionally(LetterboxdSyncFailure(if (response.statusCode == 403) "verification" else "network"))
++                }
++                override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
++                    web = null; view.destroy(); loaded.completeExceptionally(LetterboxdSyncFailure("webview")); return true
++                }
++            }
++            loadUrl("$LETTERBOXD_ORIGIN/")
++        }
++        withTimeout(30_000) { loaded.await() }
++        val script = withContext(Dispatchers.IO) { context.assets.open("personal/letterboxd-sync.js").bufferedReader().use { it.readText() } }
++        evaluate(script)
++    }
++
++    private suspend fun evaluate(script: String): String = withContext(Dispatchers.Main.immediate) {
++        val view = web ?: throw LetterboxdSyncFailure("webview")
++        if (!trustedLetterboxdUrl(view.url)) throw LetterboxdSyncFailure("origin")
++        withTimeout(5_000) {
++            suspendCancellableCoroutine { continuation ->
++                view.evaluateJavascript(script) { result -> if (continuation.isActive) continuation.resume(result ?: "null") }
++            }
++        }
++    }
++
++    override suspend fun call(command: JSONObject): JSONObject = withContext(Dispatchers.Main.immediate) {
++        val slot = "__cinema_" + UUID.randomUUID().toString().replace("-", "")
++        val payload = JSONObject.quote(command.toString())
++        evaluate("(function(){window['$slot']=null; window.CinemaLetterboxd.run(JSON.parse($payload)).then(function(v){window['$slot']=JSON.stringify({ok:true,data:v});},function(e){window['$slot']=JSON.stringify({ok:false,code:e.code||'network',retryAfter:e.retryAfter||0});});})()")
++        try {
++            withTimeout(65_000) {
++                while (true) {
++                    currentCoroutineContext().ensureActive()
++                    val raw = evaluate("window['$slot']")
++                    val value = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull()
++                    if (value != null) {
++                        if (value.length > 128 * 1024) throw LetterboxdSyncFailure("limit")
++                        val result = JSONObject(value)
++                        if (!result.optBoolean("ok")) throw LetterboxdSyncFailure(result.optString("code", "network"), result.optLong("retryAfter"))
++                        return@withTimeout result.getJSONObject("data")
++                    }
++                    delay(100)
++                }
++                @Suppress("UNREACHABLE_CODE") JSONObject()
++            }
++        } finally { withContext(NonCancellable) { runCatching { evaluate("delete window['$slot']") } } }
++    }
++
++    suspend fun close() = withContext(NonCancellable + Dispatchers.Main.immediate) {
++        web?.let { it.stopLoading(); it.clearCache(true); it.destroy() }
++        web = null; ready?.cancel(); ready = null
++        CookieManager.getInstance().flush()
++    }
++}
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalCompletion.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalCompletion.kt
+@@ -33,7 +33,7 @@
+         ranges.sumOf { (minOf(it.last + 1, duration) - it.first.coerceAtLeast(0)).coerceAtLeast(0) }.toDouble() / duration >= .8
+ }
+ 
+-internal class PersonalMovieSession(context: Context, private val id: String, private val title: String) {
++internal class PersonalMovieSession(context: Context, private val id: String, private val title: String, private val profileId: Int = 1) {
+     private val prefs = context.getSharedPreferences("personal_movie_sessions", Context.MODE_PRIVATE)
+     private val ratings = context.getSharedPreferences("personal_diary", Context.MODE_PRIVATE)
+     private val key = "coverage:$id"
+@@ -52,6 +52,7 @@
+         require(halfStars == null || halfStars in 1..10)
+         if(confirmed) return
+         val entry = JSONObject().put("sessionId", sessionId).put("contentId", id).put("title", title)
++            .put("profileId", profileId).put("watchedDate", java.time.LocalDate.now().toString())
+             .put("watchedAt", System.currentTimeMillis()).put("halfStars", halfStars ?: JSONObject.NULL)
+             .put("letterboxdStatus", "pending_connection")
+         check(ratings.edit().putString(sessionId, entry.toString()).commit()) { "Não foi possível salvar a avaliação." }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
+@@ -48,6 +48,7 @@
+     @Volatile private var phoneEditorId: String? = null
+     @Volatile private var phoneResults: List<MetaPreview> = emptyList()
+     init { refreshStorage() }
++    internal fun activeProfileId() = profiles.activeProfileId.value
+     internal fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
+         _state.update { it.copy(available = PersonalStorage.availableBytes(context), cache = PersonalStorage.cacheBytes(context)) }
+     } }
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerViewModel.kt
+@@ -239,7 +239,7 @@
+ 
+     internal val personalMovieSession by lazy {
+         if(com.nuvio.tv.BuildConfig.PERSONAL_EDITION && controller.contentType.equals("movie", true) && controller.contentId != null)
+-            com.nuvio.tv.ui.personal.PersonalMovieSession(context, controller.contentId!!, controller.title)
++            com.nuvio.tv.ui.personal.PersonalMovieSession(context, controller.contentId!!, controller.title, controller.profileId)
+         else null
+     }
+     internal suspend fun confirmPersonalMovie(halfStars: Int?) {
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/LetterboxdAutomationTest.kt
+@@ -0,0 +1,126 @@
++package com.nuvio.tv.ui.personal
++
++import android.app.Application
++import android.content.Context
++import androidx.test.core.app.ApplicationProvider
++import kotlinx.coroutines.runBlocking
++import org.json.JSONArray
++import org.json.JSONObject
++import org.junit.Assert.*
++import org.junit.Before
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.Config
++import org.robolectric.annotation.ConscryptMode
++
++@RunWith(RobolectricTestRunner::class)
++@Config(application = Application::class, sdk = [35])
++@ConscryptMode(ConscryptMode.Mode.OFF)
++class LetterboxdAutomationTest {
++    private val context: Context get() = ApplicationProvider.getApplicationContext()
++    private lateinit var store: LetterboxdSyncStore
++    private lateinit var remote: FakeRemote
++    private var imports = 0
++    @Before fun reset() {
++        listOf("personal_diary", "personal_movie_sessions", "letterboxd_automation", "letterboxd_metadata").forEach { context.getSharedPreferences(it,0).edit().clear().commit() }
++        store = LetterboxdSyncStore(context); store.enable(1,true); remote = FakeRemote(); imports=0
++    }
++    private fun engine(allowed: () -> Boolean = { true }) = LetterboxdSyncEngine(store,remote,1,allowed,{ saved,favorites ->
++        imports++; assertEquals(listOf("tt22"),saved.map { it.id }); assertEquals(listOf("tt33"),favorites.map { it.id }) })
++    private fun movie(half: Int? = 9, profile: Int = 1) = PersonalMovieSession(context,"tt11","My movie",profile).also { it.confirm(half) }
++    @Test fun confirmsDiaryWatchAndHalfStarsOnlyAfterReadingRemoteState() = runBlocking {
++        val movie=movie(); engine().sync()
++        val entry=store.entries(1).single()
++        assertEquals(movie.sessionId,entry.getString("sessionId")); assertEquals("synced",entry.getString("letterboxdStatus"))
++        assertEquals("receipt1",entry.getString("letterboxdDiaryId")); assertEquals(9,remote.half); assertTrue(remote.watched)
++        assertEquals(1,remote.posts); assertEquals(1,imports)
++        assertTrue(remote.calls.lastIndexOf("state") > remote.calls.lastIndexOf("createDiary"))
++        val reopened=LetterboxdSyncStore(context); assertTrue(reopened.pending(1).isEmpty()); assertFalse(reopened.hasWork(1,System.currentTimeMillis()))
++    }
++    @Test fun lostPostResponseIsReconciledAfterRestartWithoutSecondDiaryWrite() = runBlocking {
++        movie(); remote.loseAfterPost=true
++        assertTrue(runCatching { engine().sync() }.exceptionOrNull() is LetterboxdSyncFailure)
++        assertTrue(store.entries(1).single().getBoolean("letterboxdDiaryAttempted"))
++        store=LetterboxdSyncStore(context); store.retry(); remote.loseAfterPost=false; engine().sync()
++        assertEquals(1,remote.posts); assertEquals("synced",store.entries(1).single().getString("letterboxdStatus"))
++    }
++    @Test fun unknownPostOutcomeIsNotRetriedBlindly() = runBlocking {
++        movie(); remote.dropPost=true
++        runCatching { engine().sync() }
++        store.retry(); remote.dropPost=false; engine().sync()
++        assertEquals(1,remote.posts); assertEquals("uncertain",store.entries(1).single().getString("letterboxdStatus"))
++        assertTrue(store.entries(1).single().getLong("letterboxdRetryAt") > System.currentTimeMillis())
++    }
++    @Test fun wrongAccountCannotWriteOrImport() = runBlocking {
++        movie(); remote.username="another_member"
++        val result=runCatching { engine().sync() }
++        assertEquals("wrong_account",(result.exceptionOrNull() as LetterboxdSyncFailure).code)
++        assertEquals(listOf("identity"),remote.calls); assertEquals(0,imports)
++    }
++    @Test fun existingDifferentDiaryRatingIsPreserved() = runBlocking {
++        movie(); remote.logs.put(JSONObject().put("id","old").put("date",letterboxdEntryDate(store.entries(1).single())).put("halfStars",2))
++        engine().sync()
++        assertEquals(0,remote.posts); assertEquals("conflict",store.entries(1).single().getString("letterboxdStatus"))
++        assertFalse(remote.calls.contains("rate")); assertEquals(2,remote.logs.getJSONObject(0).getInt("halfStars"))
++    }
++    @Test fun noRatingDoesNotClearAnExistingRating() = runBlocking {
++        movie(null); remote.half=8; engine().sync()
++        assertEquals(8,remote.half); assertFalse(remote.calls.contains("rate")); assertTrue(store.pending(1).isEmpty())
++    }
++    @Test fun anIncompleteImportCannotReplaceCurrentLists() = runBlocking {
++        remote.incomplete=true
++        assertEquals("incomplete",(runCatching { engine().sync() }.exceptionOrNull() as LetterboxdSyncFailure).code)
++        assertEquals(0,imports); assertEquals(0L,store.state().lastImport)
++    }
++    @Test fun profileEventsAreIsolatedAndPauseIsCheckedBeforeRequests() = runBlocking {
++        movie(profile=2); engine().sync(); assertEquals(0,remote.posts); assertEquals(1,store.pending(2).size)
++        assertTrue(runCatching { engine { false }.sync() }.isFailure)
++        assertEquals(0,remote.posts)
++    }
++    @Test fun aReceiptCannotSatisfyTwoDistinctLocalViewings() = runBlocking {
++        movie(); engine().sync(); movie(); engine().sync()
++        assertEquals(1,remote.posts); assertEquals(1,store.entries(1).count { it.optString("letterboxdStatus")=="synced" })
++        assertEquals(1,store.entries(1).count { it.optString("letterboxdStatus")=="conflict" })
++    }
++    @Test fun retryAfterAndLocalRecordsSurviveReopening() {
++        movie(); val now=System.currentTimeMillis(); store.failure(LetterboxdSyncFailure("rate_limit",7200),now)
++        assertTrue(LetterboxdSyncStore(context).state().retryAt >= now+7_200_000)
++        assertEquals(1,LetterboxdSyncStore(context).pending(1).size)
++        store.enable(1,false); assertFalse(store.state().enabled); assertEquals(1,store.pending(1).size)
++    }
++    @Test fun repeatedImportUsesPersistedMetadataWithoutDownloadingEveryFilmAgain() = runBlocking {
++        engine().sync()
++        val first = remote.calls.count { it == "details" }; assertEquals(2, first)
++        store = LetterboxdSyncStore(context); store.retry(); engine().sync()
++        assertEquals(first, remote.calls.count { it == "details" }); assertEquals(2, imports)
++    }
++    private class FakeRemote : LetterboxdRemote {
++        val calls=mutableListOf<String>(); val logs=JSONArray()
++        var username="pedrovicq"; var posts=0; var half: Int?=null; var watched=false
++        var loseAfterPost=false; var dropPost=false; var incomplete=false
++        override suspend fun call(command: JSONObject): JSONObject {
++            val op=command.getString("op");calls+=op
++            fun state()=JSONObject().put("watched",watched).put("halfStars",half ?: JSONObject.NULL)
++            return when(op) {
++                "identity" -> JSONObject().put("id","me1").put("username",username)
++                "resolve" -> JSONObject().put("lid","film1").put("id","tt11").put("name","Movie")
++                "state" -> state()
++                "diary" -> JSONObject().put("entries",logs)
++                "createDiary" -> {
++                    posts++
++                    if(dropPost) throw LetterboxdSyncFailure("network")
++                    logs.put(JSONObject().put("id","receipt1").put("date",command.getString("date")).put("halfStars",command.opt("halfStars")))
++                    if(loseAfterPost) throw LetterboxdSyncFailure("network")
++                    JSONObject().put("id","receipt1")
++                }
++                "watch" -> { watched=true; state() }
++                "rate" -> { half=command.getInt("halfStars");state() }
++                "watchlistPage" -> JSONObject().put("ids",JSONArray().put("film2")).put("next",if(incomplete) "repeat" else JSONObject.NULL)
++                "favorites" -> JSONObject().put("ids",JSONArray().put("film3"))
++                "details" -> JSONObject().put("id",if(command.getString("lid")=="film2") "tt22" else "tt33").put("name","Imported").put("poster","https://image.test/poster.jpg")
++                else -> error(op)
++            }
++        }
++    }
++}
+--- a/app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt
+@@ -131,4 +131,18 @@
+         assertEquals(listOf("b", "a"), rows.first { it.key == "personal-queue" }.titles.map { it.id })
+         assertTrue(cinemaRows(HomeUiState(), 2, snapshot()).none { it.key == "personal-queue" })
+     }
++
++    @Test fun `letterboxd import preserves queue local titles and dismissed imports across restart`() = runBlocking {
++        preferences.setPersonalQueueMembership(movie("local"), true, 1)
++        preferences.importLetterboxd(listOf(movie("tt1"),movie("tt2")),listOf(movie("tt3")),1)
++        assertEquals(listOf("movie:local"),snapshot().queueKeys)
++        assertEquals(setOf("local","tt1","tt2"),snapshot().items.map { it.id }.toSet())
++        assertEquals(listOf("tt3"),snapshot().letterboxdFavorites.map { it.id })
++        preferences.removeItem("tt1","movie",1)
++        scope.coroutineContext[Job]!!.cancelAndJoin();stores.clear();open()
++        preferences.importLetterboxd(listOf(movie("tt1"),movie("tt2")),listOf(movie("tt3")),1)
++        assertFalse(snapshot().items.any { it.id=="tt1" });assertEquals(listOf("movie:local"),snapshot().queueKeys)
++        assertTrue(snapshot(2).letterboxdFavorites.isEmpty())
++        assertEquals("Seus favoritos no Letterboxd",cinemaRows(HomeUiState(),1,snapshot()).last().name)
++    }
+ }
+--- /dev/null
++++ b/docs/LETTERBOXD_AUTOMATION.md
+@@ -0,0 +1,26 @@
++## Integração Letterboxd automática — piloto 0.5.0
++
++29/10/2026. Implementada uma fila persistente de sincronização pela sessão normal do site no WebView do Android. É um piloto técnico: os testes usam respostas simuladas; login, importação e escrita reais na conta pedrovicq ainda não foram validados no Chromecast.
++
++### Uso
++
++Após instalar a atualização, abrir Ajustes → Letterboxd → Conectar Letterboxd, entrar como pedrovicq, verificar a sessão e voltar ao app. A conexão pela TV ativa a automação para aquele perfil. O login do Safari não é compartilhado. A tela permite pausar e tentar novamente, além de mostrar o estado de cada filme.
++
++Confirmar a conclusão de um filme e a nota coloca o registro na fila. Ao retornar da reprodução, o app tenta registrar a data no diário, marcar como assistido e enviar a nota de 0,5 a 5 estrelas. Escolher não avaliar preserva uma nota anterior. O estado “sincronizado” exige releitura do diário e da relação assistido/nota.
++
++O app consulta antes de gravar, persiste a intenção antes do POST e não repete uma gravação de diário cujo resultado ficou desconhecido. Registros diferentes para o mesmo filme/data não são sobrescritos. Uma resposta perdida pode deixar o item pendente de conferência. Um recibo remoto não pode confirmar duas sessões locais distintas.
++
++### Listas e recursos
++
++Watchlist é importada de forma aditiva para Quero ver, sem modificar a fila manual. Favoritos ganham uma fileira própria em Filmes. Remover localmente um filme importado impede sua reinclusão enquanto continuar no watchlist remoto. O app não replica exclusões remotas nem envia alterações manuais de watchlist ao Letterboxd. A importação só é aplicada após todas as páginas e identificadores serem conferidos.
++
++A sincronização começa com o app aberto, fora do player e da seleção de fontes; não exige servidor, serviço pago nem computador ligado. Um WebView temporário é destruído ao entrar na reprodução ou sair do primeiro plano. A importação completa é consultada a cada seis horas de uso, com metadados pequenos reaproveitados por até sete dias, limite de 2.100 filmes e importação máxima de 2.000 itens. Não há serviço permanente nem navegador embutido adicional.
++
++### Validação e limites
++
++110 testes Android aprovados, zero falhas/erros/ignorados, incluindo 11 casos do motor de sincronização e persistência/importação. Três scripts JavaScript aprovados: organização no celular, correção de episódios e adaptador Letterboxd com transporte simulado. Isso não comprova aceitação dos endpoints pela sessão real.
++
++A API pública oficial continua restrita para projetos pessoais. Este piloto usa a sessão normal do site, não credenciais de API extraídas. Se o site exigir login/verificação ou recusar acesso, o app pausa e informa o motivo. Não há bypass de proteção do site. A autenticação e os cookies permanecem no WebView; não são enviados ao servidor do QR, ao GitHub ou ao chat.
++
++Amigos no contexto do filme continuam usando o painel e a leitura já implementados; esta rodada não adiciona sincronização automática completa do feed social. Também não conclui todos os itens anteriores de produto. Publicação de fonte no PR #1 é separada da distribuição do APK. O canal público continua 0.4.1 até um novo APK ser publicado naquele canal.
++
+--- /dev/null
++++ b/tools/check-letterboxd-sync.cjs
+@@ -0,0 +1,46 @@
++const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
++const script=fs.readFileSync(path.join(__dirname,'../app/src/main/assets/personal/letterboxd-sync.js'),'utf8');
++function fixture(){
++ const state={username:'pedrovicq',rating:null,watched:false,status:200,contentType:'application/json',favorites:['F1'],logs:[],calls:[],tmdb:'157336'};
++ const film=()=>({id:'F1',name:'Interstellar',releaseYear:2014,links:[{url:'https://www.imdb.com/title/tt0816692/'},{url:'https://www.themoviedb.org/movie/'+state.tmdb}],poster:{sizes:[{width:1000,url:'https://image.test/large.jpg'},{width:342,url:'https://image.test/poster.jpg'}]}});
++ const relationship=()=>({memberId:'M1',productionId:'F1',watched:state.watched,rating:state.rating});
++ const sandbox={window:{},document:{cookie:'com.xk72.webparts.csrf=test-csrf'},location:{origin:'https://letterboxd.com'},URL,URLSearchParams,AbortController,setTimeout,clearTimeout,
++ fetch:async(url,options={})=>{
++  state.calls.push({url,options});const u=new URL(url);let data;
++  if(u.pathname==='/api/v0/me')data={member:{id:'M1',username:state.username,...(state.favorites===undefined?{}:{favoriteProductions:state.favorites})}};
++  else if(u.pathname==='/imdb/tt0816692/')return{ok:true,status:200,url:'https://letterboxd.com/film/interstellar/',body:{cancel:async()=>{}}};
++  else if(u.pathname==='/film/interstellar/json/')data={lid:'F1'};
++  else if(u.pathname.startsWith('/api/v0/film/')&&u.pathname.endsWith('/me'))data=relationship();
++  else if(u.pathname.startsWith('/api/v0/film/'))data=film();
++  else if(u.pathname==='/api/v0/me/watch/F1'){assert.equal(options.method,'PATCH');assert.equal(JSON.parse(options.body).watched,true);state.watched=true;data={};}
++  else if(u.pathname==='/api/v0/me/rate/F1'){assert.equal(options.method,'PATCH');state.rating=JSON.parse(options.body).rating;data={};}
++  else if(u.pathname==='/api/v0/production-log-entries'){
++   assert.equal(options.method,'POST');const b=JSON.parse(options.body);assert.equal(b.productionId,'F1');assert.equal(b.rating,4.5);
++   assert.equal(b.diaryDetails.diaryDate,'2026-10-29');assert.equal(b.diaryDetails.rewatch,false);assert.equal(b.review,undefined);assert.equal(b.privacyPolicy,undefined);
++   state.logs.push({id:'D1',owner:{id:'M1'},film:{id:'F1'},diaryDetails:b.diaryDetails,rating:b.rating});data={data:{id:'D1'}};
++  }else if(u.pathname==='/api/v0/log-entries'){assert.equal(u.searchParams.get('member'),'M1');assert.equal(u.searchParams.get('film'),'F1');data={items:state.logs};}
++  else if(u.pathname==='/api/v0/member/M1/watchlist')data={items:[{film:{id:'F1'}}],next:null};
++  else throw Error('Unexpected endpoint '+url);
++  if(options.method&&options.method!=='GET'){assert.equal(options.credentials,'same-origin');assert.equal(options.headers['x-csrf-token'],'test-csrf');}
++  return{ok:state.status===200,status:state.status,headers:{get:k=>k==='Retry-After'?'120':state.contentType},text:async()=>JSON.stringify(data)};
++ }};
++ vm.runInNewContext(script,sandbox);return{state,run:sandbox.window.CinemaLetterboxd.run,sandbox};
++}
++(async()=>{
++ let f=fixture();assert.equal((await f.run({op:'identity'})).username,'pedrovicq');
++ const movie=await f.run({op:'resolve',contentId:'tt0816692'});assert.equal(movie.id,'tt0816692');assert.equal(movie.poster,'https://image.test/poster.jpg');
++ assert.equal((await f.run({op:'resolve',contentId:'tmdb:157336'})).lid,'F1');
++ await f.run({op:'createDiary',lid:'F1',date:'2026-10-29',halfStars:9,rewatch:false});
++ assert.equal((await f.run({op:'diary',lid:'F1',date:'2026-10-29'})).entries[0].halfStars,9);
++ assert.equal((await f.run({op:'watch',lid:'F1'})).watched,true);assert.equal((await f.run({op:'rate',lid:'F1',halfStars:9})).halfStars,9);
++ assert.equal((await f.run({op:'watchlistPage'})).ids[0],'F1');assert.equal((await f.run({op:'favorites'})).ids[0],'F1');
++ f=fixture();f.state.username='other';await assert.rejects(()=>f.run({op:'rate',lid:'F1',halfStars:9}),e=>e.code==='wrong_account');assert.equal(f.state.calls.length,1);
++ f=fixture();f.state.status=403;await assert.rejects(()=>f.run({op:'watch',lid:'F1'}),e=>e.code==='verification');assert.equal(f.state.calls.length,1);
++ f=fixture();f.state.status=429;await assert.rejects(()=>f.run({op:'identity'}),e=>e.code==='rate_limit'&&e.retryAfter===120);
++ f=fixture();f.state.contentType='text/html';await assert.rejects(()=>f.run({op:'identity'}),e=>e.code==='verification');
++ f=fixture();f.state.tmdb='1573369';await assert.rejects(()=>f.run({op:'resolve',contentId:'tmdb:157336'}),e=>e.code==='identity');
++ f=fixture();f.state.favorites=undefined;await assert.rejects(()=>f.run({op:'favorites'}),e=>e.code==='format');
++ f=fixture();f.sandbox.location.origin='https://evil.test';await assert.rejects(()=>f.run({op:'identity'}),e=>e.code==='origin');assert.equal(f.state.calls.length,0);
++ f=fixture();await assert.rejects(()=>f.run({op:'rate',lid:'F1',halfStars:0}),e=>e.code==='format');assert.equal(f.state.calls.length,1);
++ console.log('PASS: web-session adapter — identity, exact IMDb/TMDB, half-stars, watch, diary/date, import, wrong account, access challenge, rate limit, malformed response and origin isolation. Fixture transport; no live Letterboxd account used.');
++})().catch(e=>{console.error(e);process.exitCode=1});

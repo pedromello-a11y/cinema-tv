@@ -1,29 +1,21 @@
-# Código de experiência — após 0.4.1
+# Cinema TV — experiência e automação Letterboxd 0.5.0
 
-Este pacote contém código em desenvolvimento e validação. **Não é um APK e não altera o instalador disponível no canal de atualização.**
+Este diretório contém três incrementos sobre a base 0.4.1. O terceiro implementa o motor de sincronização Letterboxd e incrementa para versionCode 6 / 0.5.0-pilot. A versão é um piloto: os testes foram automatizados com dados simulados; acesso autenticado e escrita reais na conta ainda dependem de validação no Chromecast.
 
-O Início prioriza continuidade pessoal. Filmes ganha Quero ver, Descobrir e Histórico; Séries ganha Acompanhando, Quero ver e Descobrir. A seleção é preservada por seção e a fila pode ser movida diretamente a uma posição.
+## Reconstruir a fonte correspondente
 
-A segunda rodada acrescenta correção de episódios das séries acompanhadas na TV e no painel móvel: visto/não visto, Já vi até aqui, temporada, prévia e desfazer. O desfazer restaura datas e posição parcial exatas e recusa alterações quando existe progresso posterior nos episódios atingidos.
+1. Obtenha Nuvio-Pedro-codigo-0.4.1.zip na release v0.4.1 e execute preparar-codigo.py para reconstruir a árvore 0.4.1 sobre a base fixa 9f17e8bf4abc799dc8c832d2894a8b3b166e4353.
+2. Aplique experiencia-sobre-0.4.1.patch.
+3. Aplique progresso-de-series.patch.
+4. Aplique letterboxd-automatico.patch.
+5. Consulte docs/EXPERIENCE.md e docs/LETTERBOXD_AUTOMATION.md.
 
-## Reproduzir o código
+A chave de assinatura não é incluída. Os patches foram aplicados a suas bases e comparados aos arquivos resultantes. A distribuição continua sob GPL-3.0 e preserva as licenças dos componentes.
 
-1. Obtenha `Nuvio-Pedro-codigo-0.4.1.zip` na [release v0.4.1](https://github.com/pedromello-a11y/cinema-tv/releases/tag/v0.4.1).
-2. Extraia e execute seu `preparar-codigo.py` conforme as instruções para reconstruir a árvore 0.4.1 sobre a base fixa.
-3. Na raiz reconstruída, aplique `git apply /caminho/experiencia-sobre-0.4.1.patch`.
-4. Aplique `git apply /caminho/progresso-de-series.patch`.
-5. Leia `docs/EXPERIENCE.md`. Nenhum incremento contém ou altera a chave de assinatura. O versionCode permanece 5; será necessário incrementar a versão antes de distribuir um APK.
+## Resultado
 
-O primeiro patch foi aplicado e seus 18 arquivos comparados à árvore da primeira rodada. O segundo foi aplicado sobre a cópia dessa base e seus 13 arquivos foram comparados ao código validado. Ambos passaram também pela verificação reversa correspondente.
+Organização pessoal, histórico, fila manual e correção de episódios na TV e no celular; automação de assistidos/diário/notas após login normal na TV; importação aditiva de watchlist e favoritos. A fila de envios é persistente e uma tentativa de diário com resultado desconhecido não é repetida cegamente. A importação não envia edições manuais de watchlist e a nova rodada não automatiza o feed social completo.
 
-## Validação atual
+110 testes Android passaram sem falhas, erros ou ignorados; três verificações JavaScript passaram. APK ARM32 0.5.0: 71.849.171 bytes; SHA-256 6f8dec774c044206285ffae73e18da83ba957ba4fc15101bad63754e2549c818. Identidade, integridade, arquitetura e mesma assinatura da 0.4.1 conferidas. Sem validação física de atualização, reprodução, login ou escrita Letterboxd.
 
-98 testes automatizados passaram, sem falhas ou ignorados: `com.nuvio.tv.ui.personal.*`, `UpdateBannerPolicyTest` e `WatchProgressRepositoryProfileIsolationTest`. Incluem DataStore real, restauração do histórico e navegação Compose por teclas em Robolectric.
-
-Dois scripts DOM passaram com Node/jsdom 26.1.0: organização do painel e correção de episódios. Essa dependência não entra no APK. Relatórios JSON incluem os hashes dos patches e resultados dos testes.
-
-Sem testes físicos nesta rodada: Chromecast, Safari, reprodução e atualização. Escrita automática Letterboxd e importação de listas continuam pendentes.
-
-## Estado de distribuição
-
-O APK público continua 0.4.1-pilot (versionCode 5). As duas rodadas estão publicadas no [PR #1](https://github.com/pedromello-a11y/cinema-tv/pull/1), no branch `experience/personal-sections`. Este pacote preserva o código completo dos dois incrementos. A publicação do código foi autorizada por Pedro; ainda não houve lançamento de um novo APK.
+O APK piloto é entregue separadamente. Esta publicação de fonte não altera latest.json nem cria uma release: o canal público continua apontando para 0.4.1.
