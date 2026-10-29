@@ -1,0 +1,13 @@
+{
+  "applicationId": "com.pedrovicq.cinema",
+  "versionCode": 4,
+  "versionName": "0.4.0-pilot",
+  "notes": "Menu oculto, nova tipografia, menos cache, filtros de fontes e painel móvel. Letterboxd autenticado pendente.",
+  "assets": {
+    "armeabi-v7a": {
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.4.0/Nuvio-Pedro-0.4.0-Chromecast-HD.apk",
+      "bytes": 71787355,
+      "sha256": "bc9c8eb4768272bf43218354c8c0defc67ebfa5457ce1596b3daf450ee0cb59f"
+    }
+  }
+}
