@@ -1,0 +1,235 @@
+{
+  "status": "source_iteration_not_apk_release",
+  "base_release": "v0.4.1",
+  "scope": "Correction of followed-series episode history with preview and session undo on TV and paired phone",
+  "apply_order": [
+    "Nuvio-Pedro-codigo-0.4.1.zip: reconstruir com preparar-codigo.py",
+    "experiencia-sobre-0.4.1.patch",
+    "progresso-de-series.patch"
+  ],
+  "previous_patch_sha256": "befc6cac7cd83a091efc77718599accc6a749781ec7fa8b98a511239617e2a4d",
+  "source_patch": {
+    "file": "progresso-de-series.patch",
+    "bytes": 71370,
+    "sha256": "ff61a625a1c2a478a3a4e728a1f5951c72c8c7b6bf9f70ce61126ef70f053e11",
+    "changed_files": [
+      "app/src/main/assets/personal/phone.html",
+      "app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt",
+      "app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditor.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditor.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorViewModel.kt",
+      "app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditorUiTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorTest.kt",
+      "docs/EXPERIENCE.md",
+      "tools/check-personal-episodes.cjs"
+    ],
+    "result_sha256": {
+      "app/src/main/assets/personal/phone.html": "c066ab19451a107b4c2e780a5f1a200eac8c543f79bba785de133c4b600db34b",
+      "app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt": "c0c4d7ce49aba5b154e2cf3c6c1b950bf834b49d0cd0f1512365de3c656a9c83",
+      "app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt": "17b7332a70f2a3702fbb4855d46ca50016aaf150daeefede8a40e9923334c9a2",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditor.kt": "f11d600c6f75215958b59a28d3504fd421d30138f12f6ce908c2e2c3e45644e0",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt": "d2de96900f5a24a500b31a9e74b50cb8dd0ba725c661fc78c3e01a7d9b50342f",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt": "49fa0e3f71f22c796f4000382c5f11c002331dbec450bb831b72b46f1c515777",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditor.kt": "b6515907b0585263cf869eac648a371456b6b6ddc6c6f5de63518abbc8423f40",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorViewModel.kt": "c2fcefbd4630dc85e5e3987597ad4aa3bc734ffaebfb8fec8923a2265ca618dd",
+      "app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt": "f1e23c799751723fab2d7f4bec16389d79c5f619c684a76b120cc4ba4b7581ca",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditorUiTest.kt": "c43c68a4b0ea4c707f17c7407d54860f1bb3c17ca46cd0480c03d804e7f99d03",
+      "app/src/test/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorTest.kt": "6d275bf3df070109bc41e4fec863fd9dea437814d939b3049af510d2babdf06d",
+      "docs/EXPERIENCE.md": "9919d26b842a482bbb6bef94464b09b034aa98f58565f0339de3404eb23be2f3",
+      "tools/check-personal-episodes.cjs": "48a0d633487a24d089cd467f5d9ffaab7bcce926447313f9a545085c750dc3cd"
+    },
+    "reverse_check": true,
+    "forward_apply_and_exact_file_comparison": true,
+    "private_signing_values_scan": "passed"
+  },
+  "tests": [
+    {
+      "name": "com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaBrowseExperienceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaEpisodeEditorUiTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaFocusNavigationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaHomeNavigationUiTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaModelsTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaQueuePositionUiTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdConnectionTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdPublicTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdSettingsUiTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalCompletionTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalEpisodeEditorTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalLibraryStoreTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalMaintenanceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalPhoneServerTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesStoreTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesViewModelTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSourcesTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalTrailersTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.updater.UpdateBannerPolicyTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "totals": {
+    "tests": 98,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "test_filters": [
+    "com.nuvio.tv.ui.personal.*",
+    "com.nuvio.tv.updater.UpdateBannerPolicyTest",
+    "com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest"
+  ],
+  "gradle_result": "BUILD SUCCESSFUL in 3m 28s",
+  "phone_dom_scripts": {
+    "tools/check-personal-phone.cjs": "passed: 8 existing contracts",
+    "tools/check-personal-episodes.cjs": "passed: open, select, future block, preview/cancel, single confirm, undo, stale refresh, close"
+  },
+  "phone_test_runtime": "Node + jsdom 26.1.0; DOM only, no device browser; not shipped in APK",
+  "native_preview": "Robolectric SDK 35 Native Graphics, Compose dialog with local test data",
+  "physical_chromecast_test": false,
+  "physical_safari_test": false,
+  "new_apk_built": false,
+  "release_feed_changed": false,
+  "published_apk": "0.4.1-pilot (versionCode 5)",
+  "limitations": [
+    "Only followed/saved-following series with cached episode catalog can be edited here.",
+    "Undo retains one correction in process memory; restart or another correction ends its availability.",
+    "No external history-provider roundtrip validated; remote sync uses existing repository paths.",
+    "Letterboxd automated writes and list import remain unimplemented.",
+    "No physical TV playback, update or performance measurements in this iteration."
+  ],
+  "public_github_publication": {
+    "status": "published_to_pr",
+    "repository": "pedromello-a11y/cinema-tv",
+    "branch": "experience/personal-sections",
+    "pull_request": 1,
+    "patch_commit": "47cce80fbee28aeb14db23389fa895ae822442af"
+  }
+}
