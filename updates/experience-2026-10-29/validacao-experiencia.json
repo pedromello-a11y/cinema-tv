@@ -1,0 +1,168 @@
+{
+  "status": "source_iteration_not_apk_release",
+  "base_release": "v0.4.1",
+  "scope": "personal experience and organization",
+  "tests": [
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaBrowseExperienceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaFocusNavigationTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaHomeNavigationUiTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaModelsTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaQueuePositionUiTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdConnectionTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdPublicTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdSettingsUiTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalCompletionTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalLibraryStoreTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalMaintenanceTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalPhoneServerTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesStoreTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesViewModelTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSourcesTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalTrailersTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.nuvio.tv.updater.UpdateBannerPolicyTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "automated_tests_total": 84,
+  "phone_dom_scenarios_passed": 8,
+  "phone_test_runtime": "Node + jsdom 26.1.0 (DOM only, no device browser)",
+  "source_patch": {
+    "file": "experiencia-sobre-0.4.1.patch",
+    "bytes": 95917,
+    "sha256": "befc6cac7cd83a091efc77718599accc6a749781ec7fa8b98a511239617e2a4d",
+    "changed_files": [
+      "app/src/main/assets/personal/phone.html",
+      "app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt",
+      "app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaBrowseSection.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaHomeScreen.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaNavigationRail.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaQueuePositionDialog.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalLibraryViewModel.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaBrowseExperienceTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaHomeNavigationUiTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaModelsTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/CinemaQueuePositionUiTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt",
+      "docs/EXPERIENCE.md",
+      "tools/check-personal-phone.cjs"
+    ],
+    "forward_apply_matches_source": true,
+    "reverse_check": true
+  },
+  "native_rendering": "Robolectric SDK35, 960x540dp, Native Graphics, fixture data",
+  "test_environment_note": "Removed stale generated runtime classes.jar before final run; confirmed explicit focus traversal bytecode is present. No source workaround was required.",
+  "physical_device_validation": false,
+  "new_apk_published": false,
+  "letterboxd_automatic_writes_implemented": false
+}
