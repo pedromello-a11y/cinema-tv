@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 12,
-  "versionName": "0.5.6-pilot",
-  "notes": "Início com o que seus amigos amaram e o que está em alta; fim de filme com sua nota e os amigos; barras do player em preto.",
+  "versionCode": 13,
+  "versionName": "0.5.7-pilot",
+  "notes": "Amigos sem apertar nada: faixa viva no topo e modo ambiente em tela cheia quando o controle descansa.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.6/Cinema-TV-0.5.6-Chromecast-HD.apk",
-      "bytes": 72028676,
-      "sha256": "cf3b5190d7b2df40165aa3c9b116ee17ee8e7d3d907c7ed0a872f11d3f32b969"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.7/Cinema-TV-0.5.7-Chromecast-HD.apk",
+      "bytes": 72033000,
+      "sha256": "6b0c6a0e30901af982f927d1d5881480f88941ea32026ecad9818c1403591cbc"
     }
   }
 }
