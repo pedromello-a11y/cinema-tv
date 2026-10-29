@@ -1,0 +1,813 @@
+diff --git a/app/src/main/assets/personal/phone.html b/app/src/main/assets/personal/phone.html
+--- a/app/src/main/assets/personal/phone.html
++++ b/app/src/main/assets/personal/phone.html
+@@ -16,11 +16,12 @@
+ <p><small>As alterações são salvas na TV. Mantenha a central aberta enquanto organiza pelo celular.</small></p>
+ </main>
+ <dialog id="mover" aria-labelledby="movetitle"><h2 id="movetitle">Mover na fila</h2><p id="moviename"></p><form id="moveform"><label>Nova posição<select id="position"></select></label><div class="actions"><button type="submit" class="primary">Salvar posição</button><button type="button" id="cancelmove">Cancelar</button></div></form></dialog>
++<dialog id="episodes" aria-labelledby="episodetitle"><h2 id="episodetitle">Corrigir episódios</h2><p id="showname"></p><label>Temporada<select id="epseason"></select></label><label>Episódio<select id="epnumber"></select></label><p id="epstatus" role="status"></p><div class="actions"><button id="eptoggle">Marcar visto</button><button id="epthrough">Já vi até aqui</button><button id="epall">Marcar temporada</button></div><section id="eppreview" hidden><p id="epcount" role="status"></p><button id="epconfirm" class="primary">Confirmar alteração</button><button id="epcancel">Cancelar prévia</button></section><p id="epmessage"></p><div class="actions"><button id="epundo" hidden>Desfazer última correção</button><button id="epclose">Fechar</button></div></dialog>
+ <script>
+-const token='__PAIRING_TOKEN__';const status=document.querySelector('#status');let working=false,currentTab='movies',snapshot=null,fingerprint='',moving=null;
++const token='__PAIRING_TOKEN__';const status=document.querySelector('#status');let working=false,currentTab='movies',snapshot=null,fingerprint='',moving=null,episodePreview=null;
+ async function request(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'X-Cinema-Token':token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});if(!r.ok){let e;try{e=await r.json()}catch{}throw Error(e?.error||'A conexão expirou. Reabra o QR Code na TV.')}return r.json()}
+ function button(text,action){const b=document.createElement('button');b.textContent=text;b.onclick=action;return b}
+-async function act(data){if(working)return;working=true;status.textContent=data.action==='search'?'Buscando…':'Salvando…';document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await request('/api/action',data);await refresh();status.textContent=data.action==='search'?((snapshot.searchResults||[]).length?'Escolha o que você quer salvar.':'Nenhum título encontrado.'):'Salvo na TV.'}catch(e){status.textContent=e.message}finally{working=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
++async function act(data){if(working)return;working=true;status.textContent=data.action==='search'?'Buscando…':'Salvando…';document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await request('/api/action',data);await refresh();status.textContent=data.action==='search'?((snapshot.searchResults||[]).length?'Escolha o que você quer salvar.':'Nenhum título encontrado.'):'Salvo na TV.';return true}catch(e){status.textContent=e.message;if(data.action.startsWith('episode')){try{await refresh()}catch{}}return false}finally{working=false;document.querySelectorAll('button').forEach(b=>b.disabled=false);if(snapshot?.episodeEditor){episodeStatus();document.querySelector('#epconfirm').disabled=!episodePreview?.expectedKeys.length}}}
+ function card(item,actions,context=''){const a=document.createElement('article');if(item.poster){try{if(new URL(item.poster).protocol==='https:'){const img=document.createElement('img');img.src=item.poster;img.alt='Capa de '+item.name;img.loading='lazy';a.append(img)}}catch{}}const d=document.createElement('div'),h=document.createElement('h3'),buttons=document.createElement('div');h.textContent=item.name;buttons.className='actions';d.append(h);if(context){const p=document.createElement('p');p.textContent=context;d.append(p)}for(const [label,op]of actions){buttons.append(button(label,typeof op==='function'?op:()=>act({id:item.id,type:item.type,...op})))}d.append(buttons);a.append(d);return a}
+ function empty(section,text){if(!section.children.length){const p=document.createElement('p');p.textContent=text;section.append(p)}}
+ function move(item,index){moving=item;const select=document.querySelector('#position');select.replaceChildren();snapshot.library.queueKeys.forEach((_,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=(i+1)+' de '+snapshot.library.queueKeys.length;select.append(option)});select.value=String(index);document.querySelector('#moviename').textContent=item.name;document.querySelector('#mover').showModal();select.focus()}
+@@ -28,10 +29,19 @@
+ for(const item of data.searchResults||[]){if(item.type!==(currentTab==='series'?'series':'movie'))continue;const actions=[['Quero ver',{action:'saveResult'}]];actions.push(item.type==='movie'?['Próximos da fila',{action:'queueResult'}]:['Acompanhar',{action:'followResult'}]);document.querySelector('#results').append(card(item,actions))}
+ keys.forEach((key,i)=>{const item=items.find(x=>x.type.toLowerCase()+':'+x.id===key);if(item)queue.append(card(item,[['Mover',()=>move(item,i)],['Tirar da fila',{action:'dequeue'}]],(i+1)+'º da fila'))});
+ for(const item of items){if(item.type==='movie'&&!keys.includes('movie:'+item.id))watch.append(card(item,[['Próximos da fila',{action:'enqueue'}],['Remover de Quero ver',{action:'remove'}]]));if(item.type==='series'){const entry=data.series.entries.find(e=>e.item.id===item.id);const actions=[];if(entry?.mode!=='FOLLOWING')actions.push([entry?.mode==='PAUSED'?'Retomar':'Acompanhar',{action:'followSaved'}]);actions.push(['Remover de Quero ver',{action:'remove'}]);saved.append(card(item,actions,entry?.mode==='FOLLOWING'?'Também acompanhando':''))}}
+-for(const entry of data.series.entries.filter(e=>e.mode!=='STOPPED')){series.append(card(entry.item,[[entry.mode==='FOLLOWING'?'Pausar':'Retomar',{action:'series',mode:entry.mode==='FOLLOWING'?'PAUSED':'FOLLOWING'}],['Deixar de acompanhar',{action:'series',mode:'STOPPED'}]],entry.label||''))}
++for(const entry of data.series.entries.filter(e=>e.mode!=='STOPPED')){series.append(card(entry.item,[['Corrigir episódios',()=>openEpisodes(entry.item)],[entry.mode==='FOLLOWING'?'Pausar':'Retomar',{action:'series',mode:entry.mode==='FOLLOWING'?'PAUSED':'FOLLOWING'}],['Deixar de acompanhar',{action:'series',mode:'STOPPED'}]],entry.label||''))}
+ for(const item of data.history||[])history.append(card(item,[['Salvar para rever',{action:'saveWatched'}]],'Visto em '+new Date(item.watchedAt).toLocaleDateString('pt-BR')));
+ empty(queue,'Escolha filmes de Quero ver para montar sua próxima sessão.');empty(watch,'Busque um filme acima ou salve um título na TV.');empty(series,'Escolha Acompanhar nos resultados da busca ou nos detalhes da série na TV.');empty(saved,'As séries salvas para depois aparecem aqui.');empty(history,'Os filmes concluídos aparecem aqui.');}
+-async function refresh(){const data=await request('/api/state');document.querySelector('#version').textContent='CINEMA · '+data.version;document.querySelector('#storage').textContent=data.availableMB+' MB livres na TV';const next=JSON.stringify([data.library,data.series,data.history,data.searchResults]);snapshot=data;if(next!==fingerprint){fingerprint=next;render()}}
++async function refresh(){const data=await request('/api/state');document.querySelector('#version').textContent='CINEMA · '+data.version;document.querySelector('#storage').textContent=data.availableMB+' MB livres na TV';const next=JSON.stringify([data.library,data.series,data.history,data.searchResults,data.episodeEditor]);snapshot=data;if(next!==fingerprint){fingerprint=next;render();renderEpisodes()}}
+ function tab(name){currentTab=name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==name);document.querySelector('#search').hidden=name==='history'||name==='settings';document.querySelector('#searchbutton').textContent=name==='series'?'Buscar séries':'Buscar filmes';render()}
+-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelector('#searchform').onsubmit=e=>{e.preventDefault();act({action:'search',query:document.querySelector('#query').value.trim(),type:currentTab==='series'?'series':'movie'})};document.querySelector('#defaults').onclick=()=>act({action:'playbackDefaults'});document.querySelector('#savefeed').onclick=()=>act({action:'feed',url:document.querySelector('#feed').value.trim()});document.querySelector('#cancelmove').onclick=()=>{document.querySelector('#mover').close();moving=null};document.querySelector('#moveform').onsubmit=e=>{e.preventDefault();const item=moving;if(!item)return;document.querySelector('#mover').close();moving=null;act({action:'move',id:item.id,type:'movie',position:Number(document.querySelector('#position').value)})};refresh().catch(e=>status.textContent=e.message);setInterval(()=>{if(!working&&!document.hidden&&!document.querySelector('#mover').open)refresh().catch(e=>status.textContent=e.message)},5000);
++document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelector('#searchform').onsubmit=e=>{e.preventDefault();act({action:'search',query:document.querySelector('#query').value.trim(),type:currentTab==='series'?'series':'movie'})};document.querySelector('#defaults').onclick=()=>act({action:'playbackDefaults'});document.querySelector('#savefeed').onclick=()=>act({action:'feed',url:document.querySelector('#feed').value.trim()});document.querySelector('#cancelmove').onclick=()=>{document.querySelector('#mover').close();moving=null};document.querySelector('#moveform').onsubmit=e=>{e.preventDefault();const item=moving;if(!item)return;document.querySelector('#mover').close();moving=null;act({action:'move',id:item.id,type:'movie',position:Number(document.querySelector('#position').value)})};refresh().catch(e=>status.textContent=e.message);setInterval(()=>{if(!working&&!document.hidden&&!document.querySelector('#mover').open&&!document.querySelector('#episodes').open)refresh().catch(e=>status.textContent=e.message)},5000);
++
++function episodeKey(row){return row.episode.season+':'+row.episode.episode}
++function selectedEpisode(){return snapshot?.episodeEditor?.rows.find(r=>episodeKey(r)===document.querySelector('#epnumber').value)}
++async function openEpisodes(item){episodePreview=null;if(await act({action:'episodeOpen',id:item.id})){renderEpisodes();document.querySelector('#episodes').showModal();document.querySelector('#epseason').focus()}}
++function renderEpisodes(){const data=snapshot?.episodeEditor;if(!data)return;document.querySelector('#showname').textContent=data.name;const season=document.querySelector('#epseason'),number=document.querySelector('#epnumber'),oldSeason=season.value,oldEpisode=number.value;season.replaceChildren();[...new Set(data.rows.map(r=>r.episode.season))].forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent='Temporada '+n;season.append(o)});if([...season.options].some(o=>o.value===oldSeason))season.value=oldSeason;renderEpisodeNumbers(oldEpisode);document.querySelector('#epundo').hidden=!data.undoToken;document.querySelector('#epmessage').textContent=data.undoLabel||'A última correção pode ser desfeita nesta sessão.';document.querySelector('#eppreview').hidden=!episodePreview}
++function renderEpisodeNumbers(old){const rows=snapshot.episodeEditor.rows.filter(r=>String(r.episode.season)===document.querySelector('#epseason').value),select=document.querySelector('#epnumber');select.replaceChildren();rows.forEach(r=>{const o=document.createElement('option');o.value=episodeKey(r);o.textContent=r.episode.episode+' · '+r.episode.title;select.append(o)});if([...select.options].some(o=>o.value===old))select.value=old;episodeStatus()}
++function episodeStatus(){const r=selectedEpisode();document.querySelector('#epstatus').textContent=!r?'Episódios ainda indisponíveis. Atualize o acompanhamento na TV e reabra.':r.watched?'Visto':r.released?'Não visto':'Estreia futura ou data não confirmada';document.querySelector('#eptoggle').textContent=r?.watched?'Marcar não visto':'Marcar visto';document.querySelector('#eptoggle').disabled=!r||(!r.watched&&!r.released);document.querySelector('#epthrough').disabled=!r;document.querySelector('#epall').disabled=!r}
++function planEpisodes(operation){const selected=selectedEpisode();if(!selected)return;const rows=snapshot.episodeEditor.rows;let targets;if(operation==='UNWATCHED')targets=[selected].filter(r=>r.watched);else if(operation==='WATCHED')targets=[selected].filter(r=>r.released&&!r.watched);else targets=rows.filter(r=>r.released&&!r.watched&&(operation==='SEASON'?r.episode.season===selected.episode.season:(r.episode.season<selected.episode.season||(r.episode.season===selected.episode.season&&r.episode.episode<=selected.episode.episode))));episodePreview={key:episodeKey(selected),operation,expectedKeys:targets.map(episodeKey)};document.querySelector('#epcount').textContent=targets.length?(operation==='UNWATCHED'?'Marcar este episódio como não visto?':`Marcar ${targets.length} ${targets.length===1?'episódio como visto':'episódios como vistos'}? Só episódios lançados; os já vistos ficam como estão.`):'Nenhum episódio precisa ser alterado.';document.querySelector('#eppreview').hidden=false;document.querySelector('#epconfirm').disabled=!targets.length}
++document.querySelector('#epseason').onchange=()=>{episodePreview=null;document.querySelector('#eppreview').hidden=true;renderEpisodeNumbers()};document.querySelector('#epnumber').onchange=()=>{episodePreview=null;document.querySelector('#eppreview').hidden=true;episodeStatus()};document.querySelector('#eptoggle').onclick=()=>planEpisodes(selectedEpisode()?.watched?'UNWATCHED':'WATCHED');document.querySelector('#epthrough').onclick=()=>planEpisodes('THROUGH');document.querySelector('#epall').onclick=()=>planEpisodes('SEASON');document.querySelector('#epcancel').onclick=()=>{episodePreview=null;document.querySelector('#eppreview').hidden=true};document.querySelector('#epconfirm').onclick=async()=>{const preview=episodePreview;if(!preview||!preview.expectedKeys.length)return;episodePreview=null;await act({action:'episodeEdit',id:snapshot.episodeEditor.id,...preview});renderEpisodes();episodeStatus();document.querySelector('#epmessage').textContent=status.textContent};document.querySelector('#epundo').onclick=async()=>{const data=snapshot.episodeEditor;if(data?.undoToken){await act({action:'episodeUndo',id:data.id,token:data.undoToken});renderEpisodes();episodeStatus();document.querySelector('#epmessage').textContent=status.textContent}};async function closeEpisodes(){document.querySelector('#episodes').close();episodePreview=null;await act({action:'episodeClose'})}document.querySelector('#epclose').onclick=closeEpisodes;document.querySelector('#episodes').oncancel=e=>{e.preventDefault();closeEpisodes()};
+ </script></html>
+diff --git a/app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt b/app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt
+--- a/app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt
++++ b/app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt
+@@ -894,8 +894,13 @@
+         videoId: String?,
+         episodes: List<Triple<Int, Int, String?>>
+     ) {
++        removeFromHistoryBatchForProfile(contentId, videoId, episodes, profileManager.activeProfileId.value)
++    }
++
++    private suspend fun removeFromHistoryBatchForProfile(
++        contentId: String, videoId: String?, episodes: List<Triple<Int, Int, String?>>, profileId: Int
++    ) {
+         if (episodes.isEmpty()) return
+-        val profileId = profileManager.activeProfileId.value
+         val episodePairs = episodes.map { (season, episode, _) -> season to episode }
+         val remoteDeleteKeys = episodes.map { (season, episode, _) ->
+             "${contentId}_s${season}e${episode}"
+@@ -930,6 +935,43 @@
+                     Log.w(TAG, "removeFromHistoryBatch watched item remote delete failed; pending mutation retained", error)
+                     triggerWatchedItemsSync(profileId)
+                 }
++        }
++        triggerRemoteSync(profileId = profileId)
++    }
++
++    override suspend fun restoreEpisodeStates(
++        contentId: String,
++        episodes: List<Triple<Int, Int, String?>>,
++        progress: List<WatchProgress>,
++        watched: List<WatchedItem>,
++        profileId: Int
++    ) {
++        val keys = episodes.map { it.first to it.second }.toSet()
++        require(keys.isNotEmpty() && keys.all { it.first > 0 && it.second > 0 })
++        require(progress.all { it.contentId == contentId && it.contentType == "series" && (it.season to it.episode) in keys })
++        require(watched.all { it.contentId == contentId && it.contentType == "series" && (it.season to it.episode) in keys })
++        removeFromHistoryBatchForProfile(contentId, null, episodes, profileId)
++        if(progress.isNotEmpty()) {
++            mutationStore.queueProgressUpserts(progress.associateBy(::progressKey), profileId)
++            watchProgressPreferences.saveProgressBatch(progress, profileId = profileId)
++            if(profileManager.activeProfileId.value == profileId) {
++                progress.forEach { value ->
++                    optimisticContinueWatchingUpdates.tryEmit(value)
++                    activeProgressProvider()?.applyOptimisticProgress(value, quiet = false)
++                }
++            }
++        }
++        if(watched.isNotEmpty()) {
++            watchedItemsPreferences.markAsWatchedBatch(watched, profileId)
++            mutationStore.queueWatchedUpserts(watched, profileId)
++            broadcastHistoryAdd(profileId, watched.map { item ->
++                TrackingHistoryItem(
++                    media = buildTrackingMediaReference(contentType = "series", parentMetaId = contentId,
++                        videoId = episodes.firstOrNull { it.first == item.season && it.second == item.episode }?.third,
++                        title = item.title, seasonNumber = item.season, episodeNumber = item.episode),
++                    watchedAtEpochMs = item.watchedAt)
++            })
++            triggerWatchedItemsSync(watched, profileId = profileId)
+         }
+         triggerRemoteSync(profileId = profileId)
+     }
+diff --git a/app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt b/app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt
+--- a/app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt
++++ b/app/src/main/java/com/nuvio/tv/domain/repository/WatchProgressRepository.kt
+@@ -161,6 +161,15 @@
+     /**
+      * Clear all watch progress
+      */
++    /** Restore the exact episode snapshots captured before a personal correction. */
++    suspend fun restoreEpisodeStates(
++        contentId: String,
++        episodes: List<Triple<Int, Int, String?>>,
++        progress: List<WatchProgress>,
++        watched: List<WatchedItem>,
++        profileId: Int
++    ) { throw UnsupportedOperationException("Episode restoration is unavailable") }
++
+     suspend fun clearAll()
+ 
+     /**
+diff --git a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditor.kt b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditor.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditor.kt
+@@ -0,0 +1,124 @@
++package com.nuvio.tv.ui.personal
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.focusable
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.foundation.verticalScroll
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.runtime.*
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.focus.*
++import androidx.compose.ui.input.InputMode
++import androidx.compose.ui.input.key.*
++import androidx.compose.ui.platform.*
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import androidx.compose.ui.window.Dialog
++import androidx.compose.ui.window.DialogProperties
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.compose.collectAsStateWithLifecycle
++import androidx.tv.material3.Text
++
++@Composable
++internal fun CinemaEpisodeEditor(id: String, onDismiss: () -> Unit, viewModel: PersonalEpisodeEditorViewModel = hiltViewModel()) {
++    val state by viewModel.state.collectAsStateWithLifecycle()
++    LaunchedEffect(id) { viewModel.open(id) }
++    CinemaEpisodeEditorDialog(state, viewModel::apply, viewModel::undo, { viewModel.open(id) }, onDismiss)
++}
++private data class EpisodeEditPreview(val key: String, val action: EpisodeEditAction, val keys: List<String>)
++
++@Composable
++internal fun CinemaEpisodeEditorDialog(state: EpisodeEditorUiState, onApply: (String, EpisodeEditAction, List<String>) -> Unit,
++    onUndo: (String) -> Unit, onReload: () -> Unit, onDismiss: () -> Unit) {
++    val data = state.data
++    val rows = data?.rows.orEmpty()
++    val seasons = rows.map { it.episode.season }.distinct()
++    val suggested = rows.firstOrNull { !it.watched && it.released } ?: rows.firstOrNull()
++    var season by remember(data?.id) { mutableIntStateOf(suggested?.episode?.season ?: 1) }
++    var episode by remember(data?.id) { mutableIntStateOf(suggested?.episode?.episode ?: 1) }
++    val inSeason = rows.filter { it.episode.season == season }
++    val selected = inSeason.firstOrNull { it.episode.episode == episode } ?: inSeason.firstOrNull()
++    var preview by remember(data?.id) { mutableStateOf<EpisodeEditPreview?>(null) }
++    val first = remember { FocusRequester() }
++    val epFocus = remember { FocusRequester() }
++    val firstAction = remember { FocusRequester() }
++    val confirm = remember { FocusRequester() }
++    val reload = remember { FocusRequester() }
++    fun plan(action: EpisodeEditAction) {
++        val key = selected?.episode?.key ?: return
++        preview = EpisodeEditPreview(key, action, episodeEditSelection(rows, key, action).map { it.episode.key })
++    }
++    Dialog(onDismissRequest = { if(preview != null) preview = null else onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
++        val input = LocalInputModeManager.current; val window = LocalWindowInfo.current
++        LaunchedEffect(window.isWindowFocused, data?.id, preview, state.busy) {
++            if(window.isWindowFocused && !state.busy) {
++                input.requestInputMode(InputMode.Keyboard); withFrameNanos { }
++                runCatching { if(preview != null) confirm.requestFocus() else first.requestFocus() }
++            }
++        }
++        Column(Modifier.width(570.dp).heightIn(max = 480.dp).verticalScroll(rememberScrollState()).background(CinemaStyle.Surface, RoundedCornerShape(20.dp)).padding(26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
++            Text("Corrigir episódios", fontFamily = CinemaDisplay, fontSize = 26.sp, color = CinemaStyle.Ink)
++            Text(data?.name ?: "Carregando a série…", fontFamily = CinemaUi, fontSize = 15.sp, color = CinemaStyle.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
++            val planned = preview
++            if(planned != null) {
++                Text(if(planned.action == EpisodeEditAction.UNWATCHED) "Marcar como não visto?" else if(planned.keys.size == 1) "Marcar 1 episódio como visto?" else "Marcar ${planned.keys.size} episódios como vistos?", fontFamily = CinemaUi, fontSize = 21.sp, color = CinemaStyle.Ink)
++                Text(if(planned.action == EpisodeEditAction.UNWATCHED) "O episódio poderá ser assistido desde o início. Você pode desfazer a última correção nesta sessão." else "Só os episódios lançados entram nesta alteração. Os já vistos ficam como estão.", fontFamily = CinemaUi, fontSize = 14.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
++                Text(planned.keys.joinToString(" · ") { "T${it.substringBefore(':')} E${it.substringAfter(':')}" }, fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
++                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
++                    CinemaAction(if(state.busy) "Salvando…" else "Confirmar", true, Modifier.focusRequester(confirm).testTag("episode-confirm"), enabled = !state.busy && planned.keys.isNotEmpty()) {
++                        onApply(planned.key, planned.action, planned.keys); preview = null
++                    }
++                    CinemaAction("Cancelar", false, enabled = !state.busy) { preview = null }
++                }
++            } else if(selected != null) {
++                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
++                    EpisodePicker("Temporada $season", Modifier.weight(1f).focusRequester(first).focusProperties { down = epFocus }.testTag("episode-season"), !state.busy) { delta ->
++                        val index = seasons.indexOf(season).coerceAtLeast(0)
++                        season = seasons[(index + delta).coerceIn(0, seasons.lastIndex)]
++                        episode = rows.first { it.episode.season == season }.episode.episode
++                    }
++                }
++                EpisodePicker("Episódio ${selected.episode.episode} · ${selected.episode.title}", Modifier.fillMaxWidth().focusRequester(epFocus).focusProperties { up = first; down = if(selected.watched || selected.released) firstAction else reload }.testTag("episode-number"), !state.busy) { delta ->
++                    val index = inSeason.indexOf(selected)
++                    episode = inSeason[(index + delta).coerceIn(0, inSeason.lastIndex)].episode.episode
++                }
++                Text(if(selected.watched) "Visto" else if(selected.released) "Não visto" else "Estreia futura ou data não confirmada", fontFamily = CinemaUi, fontSize = 13.sp, color = CinemaStyle.Green)
++                Text("Use ← → para escolher. Depois confira a alteração antes de salvar.", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted)
++                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++                    CinemaAction(if(selected.watched) "Marcar não visto" else "Marcar visto", false, Modifier.focusRequester(firstAction).testTag("episode-toggle"), enabled = !state.busy && (selected.watched || selected.released)) {
++                        plan(if(selected.watched) EpisodeEditAction.UNWATCHED else EpisodeEditAction.WATCHED)
++                    }
++                    CinemaAction("Já vi até aqui", false, Modifier.testTag("episode-through"), enabled = !state.busy && episodeEditSelection(rows, selected.episode.key, EpisodeEditAction.THROUGH).isNotEmpty()) { plan(EpisodeEditAction.THROUGH) }
++                    CinemaAction("Marcar temporada", false, Modifier.testTag("episode-season-all"), enabled = !state.busy && episodeEditSelection(rows, selected.episode.key, EpisodeEditAction.SEASON).isNotEmpty()) { plan(EpisodeEditAction.SEASON) }
++                }
++            } else {
++                Text(if(state.busy) "Carregando episódios…" else "Os episódios ainda não estão disponíveis. Atualize o acompanhamento da série e reabra esta tela.", fontFamily = CinemaUi, fontSize = 14.sp, lineHeight = 20.sp, color = CinemaStyle.Muted)
++            }
++            state.message?.let { Text(it, fontFamily = CinemaUi, fontSize = 13.sp, color = CinemaStyle.Green, maxLines = 3) }
++            if(preview == null) {
++                data?.undoLabel?.let { Text(it, fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted) }
++                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++                    if(data?.undoToken != null) CinemaAction("Desfazer", false, Modifier.testTag("episode-undo"), enabled = !state.busy) { onUndo(data.undoToken) }
++                    CinemaAction("Recarregar", false, if(selected == null) Modifier.focusRequester(first) else Modifier.focusRequester(reload), enabled = !state.busy, onClick = onReload)
++                    CinemaAction("Voltar", true, enabled = !state.busy, onClick = onDismiss)
++                }
++            }
++        }
++    }
++}
++
++@Composable
++private fun EpisodePicker(label: String, modifier: Modifier, enabled: Boolean, change: (Int) -> Unit) {
++    var focused by remember { mutableStateOf(false) }
++    Text(label, fontFamily = CinemaUi, fontSize = 17.sp, color = CinemaStyle.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
++        modifier = modifier.onFocusChanged { focused = it.isFocused }.onPreviewKeyEvent { event ->
++            if(event.type != KeyEventType.KeyDown) false else when(event.key) {
++                Key.DirectionLeft -> { if(enabled) change(-1); true }
++                Key.DirectionRight -> { if(enabled) change(1); true }
++                else -> false
++            }
++        }.focusable().border(if(focused) 2.dp else 1.dp, if(focused) CinemaStyle.Green else CinemaStyle.Outline, RoundedCornerShape(12.dp)).padding(14.dp))
++}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt
+@@ -40,13 +40,14 @@
+     val first = remember { FocusRequester() }
+     val mover = remember { FocusRequester() }
+     var showMover by remember { mutableStateOf(false) }
++    var showEpisodes by remember { mutableStateOf(false) }
+     var returnToMover by remember { mutableStateOf(false) }
+     LaunchedEffect(position) { if(position < 0) showMover = false }
+     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+         val input = LocalInputModeManager.current
+         val window = LocalWindowInfo.current
+-        LaunchedEffect(window.isWindowFocused, showMover) {
+-            if(window.isWindowFocused && !showMover) { input.requestInputMode(InputMode.Keyboard); withFrameNanos { }; runCatching { if(returnToMover && position >= 0) mover.requestFocus() else first.requestFocus() } }
++        LaunchedEffect(window.isWindowFocused, showMover, showEpisodes, busy) {
++            if(window.isWindowFocused && !showMover && !showEpisodes && !busy) { input.requestInputMode(InputMode.Keyboard); withFrameNanos { }; runCatching { if(returnToMover && position >= 0) mover.requestFocus() else first.requestFocus() } }
+         }
+         Column(Modifier.width(420.dp).heightIn(max = 460.dp).background(CinemaStyle.Surface, RoundedCornerShape(20.dp)).verticalScroll(rememberScrollState()).padding(26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+             Text(title.name, fontFamily = CinemaUi, fontSize = 27.sp, color = CinemaStyle.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+@@ -77,6 +78,7 @@
+                     false, Modifier.fillMaxWidth().height(40.dp), enabled = series.snapshot.ready && !busy) {
+                     onSeriesMode(if(mode == PersonalSeriesMode.FOLLOWING) PersonalSeriesMode.PAUSED else PersonalSeriesMode.FOLLOWING)
+                 }
++                if(summary != null) CinemaAction("Corrigir episódios", false, Modifier.fillMaxWidth(), enabled = !busy) { showEpisodes = true }
+                 if(mode == PersonalSeriesMode.FOLLOWING || mode == PersonalSeriesMode.PAUSED) {
+                     CinemaAction("Deixar de acompanhar", false, Modifier.fillMaxWidth().height(40.dp), enabled = !busy) { onSeriesMode(PersonalSeriesMode.STOPPED) }
+                 }
+@@ -84,6 +86,7 @@
+             Text(if(busy) "Salvando…" else message ?: series.message ?: "Listas locais neste piloto.", fontFamily = CinemaUi, fontSize = 11.sp, color = CinemaStyle.Muted)
+             CinemaAction("Concluir", true, Modifier.fillMaxWidth().height(40.dp), onClick = onDismiss)
+         }
++        if(showEpisodes) CinemaEpisodeEditor(title.id, onDismiss = { showEpisodes = false })
+         if(showMover && position >= 0) CinemaQueuePositionDialog(title, library, position,
+             onConfirm = { onAction(PersonalLibraryAction.MoveTo(it)); showMover = false },
+             onDismiss = { showMover = false })
+diff --git a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
+@@ -38,12 +38,14 @@
+     private val profiles: ProfileManager,
+     private val player: PlayerSettingsDataStore,
+     private val catalogs: CatalogRepository,
+-    private val watched: WatchedItemsPreferences
++    private val watched: WatchedItemsPreferences,
++    private val episodeEditor: PersonalEpisodeEditor
+ ) : ViewModel() {
+     private val updater = PersonalUpdater(context, client)
+     private val _state = MutableStateFlow(ControlState())
+     internal val state = _state.asStateFlow()
+     private var server: PersonalPhoneServer? = null
++    @Volatile private var phoneEditorId: String? = null
+     @Volatile private var phoneResults: List<MetaPreview> = emptyList()
+     init { refreshStorage() }
+     internal fun refreshStorage() { viewModelScope.launch(Dispatchers.IO) {
+@@ -96,6 +98,7 @@
+                     .sortedByDescending { it.watchedAt }.distinctBy { it.contentId }
+                     .map { mapOf("id" to it.contentId, "type" to "movie", "name" to it.title, "poster" to it.poster, "watchedAt" to it.watchedAt) }
+                 gson.toJson(mapOf("library" to library.observePersonalLibrary(profile).first(), "series" to mapOf("entries" to summaries, "ready" to following.ready), "history" to movies,
++                    "episodeEditor" to phoneEditorId?.let { episodeEditor.load(it, profile) },
+                     "searchResults" to phoneResults.map { mapOf("id" to it.id, "type" to it.apiType, "name" to it.name, "poster" to it.poster) },
+                     "availableMB" to PersonalStorage.availableBytes(context) / (1024 * 1024), "version" to com.nuvio.tv.BuildConfig.VERSION_NAME))
+             } }
+@@ -104,6 +107,20 @@
+                 check(profiles.activeProfileId.value == profile) { "O perfil mudou. Reabra o QR Code." }
+                 val op = data.getString("action")
+                 when(op) {
++                    "episodeOpen" -> { val id = data.getString("id"); episodeEditor.load(id, profile); phoneEditorId = id }
++                    "episodeClose" -> { phoneEditorId = null }
++                    "episodeEdit" -> {
++                        val id = data.getString("id")
++                        require(phoneEditorId == id) { "Reabra o progresso desta série." }
++                        val expected = data.getJSONArray("expectedKeys")
++                        episodeEditor.apply(id, data.getString("key"), EpisodeEditAction.valueOf(data.getString("operation")),
++                            (0 until expected.length()).map { expected.getString(it) }, profile)
++                    }
++                    "episodeUndo" -> {
++                        val id = data.getString("id")
++                        require(phoneEditorId == id) { "Reabra o progresso desta série." }
++                        episodeEditor.undo(id, data.getString("token"), profile)
++                    }
+                     "search" -> {
+                         val query = data.getString("query").trim()
+                         require(query.length in 2..100) { "Digite de 2 a 100 caracteres." }
+@@ -162,6 +179,8 @@
+         server = candidate
+         _state.update { it.copy(phoneUrl = address) }
+     }
+-    internal fun closePhone() { server?.stop(); server = null; phoneResults = emptyList(); _state.update { it.copy(phoneUrl = null) } }
++    internal fun closePhone() {
++        phoneEditorId = null
++        server?.stop(); server = null; phoneResults = emptyList(); _state.update { it.copy(phoneUrl = null) } }
+     override fun onCleared() { closePhone(); super.onCleared() }
+ }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditor.kt b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditor.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditor.kt
+@@ -0,0 +1,108 @@
++package com.nuvio.tv.ui.personal
++
++import com.nuvio.tv.core.profile.ProfileManager
++import com.nuvio.tv.data.local.PersonalSeriesPreferences
++import com.nuvio.tv.data.local.WatchedItemsPreferences
++import com.nuvio.tv.domain.model.*
++import com.nuvio.tv.domain.repository.WatchProgressRepository
++import kotlinx.coroutines.flow.first
++import kotlinx.coroutines.sync.Mutex
++import kotlinx.coroutines.sync.withLock
++import java.time.Instant
++import java.time.ZoneId
++import java.util.UUID
++import javax.inject.Inject
++import javax.inject.Singleton
++
++enum class EpisodeEditAction { WATCHED, UNWATCHED, THROUGH, SEASON }
++data class EpisodeEditorRow(val episode: PersonalEpisode, val watched: Boolean, val released: Boolean)
++data class EpisodeEditorData(val id: String, val name: String, val rows: List<EpisodeEditorRow>, val undoToken: String? = null, val undoLabel: String? = null)
++
++internal fun episodeEditSelection(rows: List<EpisodeEditorRow>, key: String, action: EpisodeEditAction): List<EpisodeEditorRow> {
++    val selected = rows.firstOrNull { it.episode.key == key } ?: error("Episódio não encontrado. Reabra o progresso.")
++    return when(action) {
++        EpisodeEditAction.UNWATCHED -> listOf(selected).filter { it.watched }
++        EpisodeEditAction.WATCHED -> listOf(selected).filter { it.released && !it.watched }
++        EpisodeEditAction.SEASON -> rows.filter { it.released && !it.watched && it.episode.season == selected.episode.season }
++        EpisodeEditAction.THROUGH -> rows.filter { it.released && !it.watched &&
++            (it.episode.season < selected.episode.season || (it.episode.season == selected.episode.season && it.episode.episode <= selected.episode.episode)) }
++    }
++}
++
++/** A single editor service is shared by TV and phone. Writes use the player's existing history path. */
++@Singleton
++class PersonalEpisodeEditor @Inject constructor(
++    private val series: PersonalSeriesPreferences,
++    private val watched: WatchedItemsPreferences,
++    private val progress: WatchProgressRepository,
++    private val profiles: ProfileManager
++) {
++    private val lock = Mutex()
++    private data class Snapshot(val history: Map<Pair<Int,Int>, WatchedItem>, val progress: Map<Pair<Int,Int>, WatchProgress>)
++    private data class Undo(val token: String, val profile: Int, val item: SavedLibraryItem, val episodes: List<PersonalEpisode>,
++        val action: EpisodeEditAction, val before: Snapshot, val after: Snapshot, val label: String)
++    private var undo: Undo? = null
++
++    private fun checkProfile(profile: Int) = check(profiles.activeProfileId.value == profile) { "O perfil mudou. Reabra o progresso." }
++    private suspend fun entry(id: String, profile: Int): PersonalSeriesEntry {
++        checkProfile(profile)
++        return series.observe(profile).first().entries.firstOrNull { it.item.id == id }
++            ?: error("Acompanhe a série para organizar seus episódios.")
++    }
++    private suspend fun snapshot(id: String, profile: Int): Snapshot = Snapshot(
++        watched.observeAllItems(profile).first().filter { it.contentId == id && it.contentType == "series" && it.season != null && it.episode != null }
++            .associateBy { it.season!! to it.episode!! }, progress.getAllEpisodeProgress(id, profile).first())
++    private fun rows(entry: PersonalSeriesEntry, snapshot: Snapshot): List<EpisodeEditorRow> {
++        val now = Instant.now(); val zone = ZoneId.systemDefault()
++        return entry.catalog?.episodes.orEmpty().filter { it.season > 0 && it.episode > 0 }.distinctBy { it.key }
++            .sortedWith(compareBy({ it.season }, { it.episode })).map { ep ->
++                EpisodeEditorRow(ep, (ep.season to ep.episode) in snapshot.history || snapshot.progress[ep.season to ep.episode]?.isCompleted() == true,
++                    personalEpisodeRelease(ep.released, zone)?.let { !it.isAfter(now) } == true)
++            }
++    }
++    private fun data(entry: PersonalSeriesEntry, snapshot: Snapshot, profile: Int): EpisodeEditorData {
++        val pending = undo?.takeIf { it.profile == profile && it.item.id == entry.item.id }
++        return EpisodeEditorData(entry.item.id, entry.item.name, rows(entry, snapshot), pending?.token, pending?.label)
++    }
++    suspend fun load(id: String, profile: Int): EpisodeEditorData = lock.withLock {
++        val entry = entry(id, profile)
++        data(entry, snapshot(id, profile), profile)
++    }
++    private fun completed(item: SavedLibraryItem, ep: PersonalEpisode) = WatchProgress(
++        contentId = item.id, contentType = "series", name = item.name, poster = item.poster, backdrop = item.background, logo = item.logo,
++        videoId = ep.id, season = ep.season, episode = ep.episode, episodeTitle = ep.title,
++        position = 1, duration = 1, lastWatched = System.currentTimeMillis(), addonBaseUrl = item.addonBaseUrl, progressPercent = 100f, completionConfirmed = true)
++    suspend fun apply(id: String, key: String, action: EpisodeEditAction, expectedKeys: List<String>, profile: Int): EpisodeEditorData = lock.withLock {
++        val entry = entry(id, profile)
++        val before = snapshot(id, profile)
++        val selected = episodeEditSelection(rows(entry, before), key, action).map { it.episode }
++        check(selected.map { it.key } == expectedKeys) { "O progresso mudou. Confira a prévia e confirme novamente." }
++        check(selected.isNotEmpty()) { "Nenhum episódio precisa ser alterado." }
++        checkProfile(profile)
++        // Discard the older inverse before a new write; never undo it against a partly changed state.
++        undo = null
++        if(action == EpisodeEditAction.UNWATCHED) progress.removeFromHistoryBatch(id, null, selected.map { Triple(it.season, it.episode, it.id) })
++        else progress.markAsCompletedBatch(selected.map { completed(entry.item, it) })
++        checkProfile(profile)
++        val after = snapshot(id, profile)
++        val label = if(action == EpisodeEditAction.UNWATCHED) "Episódio marcado como não visto" else if(selected.size == 1) "1 episódio marcado como visto" else "${selected.size} episódios marcados como vistos"
++        undo = Undo(UUID.randomUUID().toString(), profile, entry.item, selected, action, before, after, label)
++        data(entry, after, profile)
++    }
++    suspend fun undo(id: String, token: String, profile: Int): EpisodeEditorData = lock.withLock {
++        checkProfile(profile)
++        val last = undo?.takeIf { it.token == token && it.profile == profile && it.item.id == id }
++            ?: error("Esta alteração não pode mais ser desfeita.")
++        val entry = entry(id, profile)
++        val current = snapshot(id, profile)
++        val keys = last.episodes.map { it.season to it.episode }
++        check(keys.all { current.history[it] == last.after.history[it] && current.progress[it] == last.after.progress[it] }) {
++            "Houve uma nova reprodução ou alteração nesses episódios. Confira o progresso antes de corrigir."
++        }
++        undo = null
++        progress.restoreEpisodeStates(id, last.episodes.map { Triple(it.season, it.episode, it.id) },
++            keys.mapNotNull { last.before.progress[it] }, keys.mapNotNull { last.before.history[it] }, profile)
++        checkProfile(profile)
++        data(entry, snapshot(id, profile), profile)
++    }
++}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorViewModel.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorViewModel.kt
+@@ -0,0 +1,39 @@
++package com.nuvio.tv.ui.personal
++
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import com.nuvio.tv.core.profile.ProfileManager
++import dagger.hilt.android.lifecycle.HiltViewModel
++import javax.inject.Inject
++import kotlinx.coroutines.*
++import kotlinx.coroutines.flow.*
++
++internal data class EpisodeEditorUiState(val data: EpisodeEditorData? = null, val busy: Boolean = false, val message: String? = null)
++@HiltViewModel
++class PersonalEpisodeEditorViewModel @Inject constructor(private val editor: PersonalEpisodeEditor, private val profiles: ProfileManager) : ViewModel() {
++    private val _state = MutableStateFlow(EpisodeEditorUiState())
++    internal val state = _state.asStateFlow()
++    private var target = ""
++    private var profile = 0
++    internal fun open(id: String) {
++        if(_state.value.busy) return
++        target = id; profile = profiles.activeProfileId.value
++        _state.value = EpisodeEditorUiState()
++        task { editor.load(target, profile) }
++    }
++    internal fun apply(key: String, action: EpisodeEditAction, expected: List<String>) = task { editor.apply(target, key, action, expected, profile) }
++    internal fun undo(token: String) = task { editor.undo(target, token, profile) }
++    private fun task(work: suspend () -> EpisodeEditorData) {
++        if(_state.value.busy) return
++        _state.update { it.copy(busy = true, message = null) }
++        viewModelScope.launch {
++            try { _state.value = EpisodeEditorUiState(data = work()) }
++            catch(e: CancellationException) { throw e }
++            catch(e: Exception) {
++                val refreshed = try { editor.load(target, profile) } catch(cancelled: CancellationException) { throw cancelled } catch(_: Exception) { null }
++                _state.update { it.copy(data = refreshed ?: it.data, message = e.message ?: "Não foi possível alterar. Reabra e confira o progresso.") }
++            }
++            finally { _state.update { it.copy(busy = false) } }
++        }
++    }
++}
+diff --git a/app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt b/app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt
+--- a/app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt
++++ b/app/src/test/java/com/nuvio/tv/data/repository/WatchProgressRepositoryProfileIsolationTest.kt
+@@ -13,6 +13,7 @@
+ import com.nuvio.tv.data.local.WatchProgressPreferences
+ import com.nuvio.tv.data.local.WatchProgressSource
+ import com.nuvio.tv.data.local.WatchedItemsPreferences
++import com.nuvio.tv.domain.model.WatchedItem
+ import com.nuvio.tv.domain.model.WatchProgress
+ import com.nuvio.tv.domain.repository.MetaRepository
+ import io.mockk.coEvery
+@@ -99,6 +100,35 @@
+         }
+     }
+ 
++    @Test fun `episode undo restores exact timestamps and partial playback in the original profile`() = runTest {
++        val harness = harness(activeProfileId = 2)
++        val partial = progress("show", 4000, 10000).copy(contentType = "series", season = 1, episode = 2, videoId = "show:1:2")
++        val original = WatchedItem("show", "series", "Show", 1, 2, 35L, poster = "original-poster")
++        harness.repository.restoreEpisodeStates("show", listOf(Triple(1, 2, "show:1:2")), listOf(partial), listOf(original), 1)
++        coVerify(exactly = 1) { harness.progressPreferences.removeProgressBatch("show", listOf(1 to 2), 1) }
++        coVerify(exactly = 1) { harness.progressPreferences.saveProgressBatch(listOf(partial), profileId = 1) }
++        coVerify(exactly = 1) { harness.watchedPreferences.markAsWatchedBatch(listOf(original), 1) }
++        coVerify(exactly = 1) { harness.mutationStore.queueWatchedUpserts(listOf(original), 1) }
++        coVerify(exactly = 1) { harness.mutationStore.queueProgressUpserts(mapOf("show_s1e2" to partial), 1) }
++        coVerify(exactly = 0) { harness.progressPreferences.removeProgressBatch(any(), any(), 2) }
++    }
++
++    @Test fun `undo cannot inject an unrelated title or episode into the restored history`() = runTest {
++        val harness = harness(activeProfileId = 1)
++        val wrong = WatchedItem("other", "series", "Other", 1, 2, 35)
++        val result = runCatching { harness.repository.restoreEpisodeStates("show", listOf(Triple(1,2,"show:1:2")), emptyList(), listOf(wrong), 1) }
++        org.junit.Assert.assertTrue(result.exceptionOrNull() is IllegalArgumentException)
++        coVerify(exactly = 0) { harness.progressPreferences.removeProgressBatch(any(), any(), any()) }
++    }
++
++    @Test fun `undo of a newly marked episode restores absence without inventing progress`() = runTest {
++        val harness = harness(activeProfileId = 1)
++        harness.repository.restoreEpisodeStates("show", listOf(Triple(1,2,"show:1:2")), emptyList(), emptyList(), 1)
++        coVerify(exactly = 1) { harness.watchedPreferences.unmarkAsWatchedBatch("show", listOf(1 to 2), 1) }
++        coVerify(exactly = 0) { harness.watchedPreferences.markAsWatchedBatch(any(), any()) }
++        coVerify(exactly = 0) { harness.progressPreferences.saveProgressBatch(any(), any()) }
++    }
++
+     private fun harness(activeProfileId: Int): Harness {
+         val activeProfile = MutableStateFlow(activeProfileId)
+         val profileManager = mockk<ProfileManager>()
+diff --git a/app/src/test/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditorUiTest.kt b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditorUiTest.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaEpisodeEditorUiTest.kt
+@@ -0,0 +1,65 @@
++package com.nuvio.tv.ui.personal
++
++import android.app.Application
++import androidx.compose.ui.input.key.Key
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createComposeRule
++import com.nuvio.tv.domain.model.PersonalEpisode
++import com.nuvio.tv.ui.theme.NuvioTheme
++import org.junit.Assert.*
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.*
++
++@OptIn(ExperimentalTestApi::class)
++@RunWith(RobolectricTestRunner::class)
++@Config(application=Application::class,sdk=[35],qualifiers="w960dp-h540dp-land-xhdpi")
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++@ConscryptMode(ConscryptMode.Mode.OFF)
++class CinemaEpisodeEditorUiTest {
++    @get:Rule val compose=createComposeRule()
++    private val writes=mutableListOf<Triple<String,EpisodeEditAction,List<String>>>()
++    private fun open() {
++        fun row(s:Int,e:Int,watched:Boolean=false,released:Boolean=true)=EpisodeEditorRow(PersonalEpisode("show:$s:$e",s,e,"Episódio $e",null),watched,released)
++        compose.setContent { NuvioTheme { CinemaEpisodeEditorDialog(
++            EpisodeEditorUiState(EpisodeEditorData("show","Minha série",listOf(row(1,1,true),row(1,2),row(2,1),row(2,2,released=false)))),
++            {key,action,expected->writes+=Triple(key,action,expected)}, {}, {}, {}) } }
++        compose.waitForIdle()
++        compose.runOnIdle {
++            val decor=org.robolectric.shadows.ShadowDialog.getLatestDialog().window!!.decorView
++            val root=org.robolectric.util.ReflectionHelpers.callInstanceMethod<Any>(decor,"getViewRootImpl")
++            org.robolectric.shadow.api.Shadow.extract<org.robolectric.shadows.ShadowViewRootImpl>(root).callWindowFocusChanged(true)
++        }
++        compose.mainClock.advanceTimeBy(100);compose.waitForIdle()
++        compose.onNodeWithTag("episode-season").assertIsFocused()
++    }
++    private fun press(key:Key) { compose.onAllNodes(isFocused()).onFirst().performKeyInput { pressKey(key) };compose.waitForIdle() }
++    @Test fun remote_previews_batch_and_cancel_does_not_write() {
++        open();press(Key.DirectionRight);press(Key.DirectionDown);press(Key.DirectionDown);press(Key.DirectionRight)
++        compose.onNodeWithTag("episode-through").assertIsFocused();press(Key.Enter)
++        compose.onNodeWithText("Marcar 2 episódios como vistos?").assertIsDisplayed()
++        compose.onNodeWithTag("episode-confirm").assertIsFocused()
++        assertTrue(writes.isEmpty())
++        compose.runOnIdle {
++            val view=org.robolectric.shadows.ShadowDialog.getLatestDialog().window!!.decorView
++            val bitmap=android.graphics.Bitmap.createBitmap(view.width,view.height,android.graphics.Bitmap.Config.ARGB_8888)
++            view.draw(android.graphics.Canvas(bitmap))
++            val file=java.io.File("build/reports/cinema/system-episodios-previa.png").apply { parentFile!!.mkdirs() }
++            file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
++        }
++        press(Key.DirectionRight);compose.onNodeWithText("Cancelar").assertIsFocused();press(Key.Enter)
++        assertTrue(writes.isEmpty());compose.onNodeWithTag("episode-season").assertIsFocused()
++        press(Key.DirectionDown);press(Key.DirectionDown);press(Key.DirectionRight);press(Key.Enter);press(Key.Enter)
++        assertEquals(listOf(Triple("2:1",EpisodeEditAction.THROUGH,listOf("1:2","2:1"))),writes)
++    }
++    @Test fun future_episode_cannot_be_marked_and_does_not_trap_focus() {
++        open();press(Key.DirectionRight);press(Key.DirectionDown);press(Key.DirectionRight)
++        compose.onNodeWithText("Estreia futura ou data não confirmada").assertIsDisplayed()
++        compose.onNodeWithTag("episode-toggle").assertIsNotEnabled()
++        press(Key.DirectionDown);compose.onNodeWithText("Recarregar").assertIsFocused()
++        press(Key.DirectionRight);compose.onNodeWithText("Voltar").assertIsFocused()
++        assertTrue(writes.isEmpty())
++    }
++}
+diff --git a/app/src/test/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorTest.kt b/app/src/test/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorTest.kt
+new file mode 100644
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/PersonalEpisodeEditorTest.kt
+@@ -0,0 +1,106 @@
++package com.nuvio.tv.ui.personal
++
++import com.nuvio.tv.core.profile.ProfileManager
++import com.nuvio.tv.data.local.*
++import com.nuvio.tv.domain.model.*
++import com.nuvio.tv.domain.repository.WatchProgressRepository
++import io.mockk.*
++import kotlinx.coroutines.*
++import kotlinx.coroutines.flow.*
++import org.junit.Assert.*
++import org.junit.Before
++import org.junit.Test
++
++class PersonalEpisodeEditorTest {
++    private val profile = MutableStateFlow(1)
++    private val history = MutableStateFlow<List<WatchedItem>>(emptyList())
++    private val playback = MutableStateFlow<Map<Pair<Int,Int>,WatchProgress>>(emptyMap())
++    private lateinit var repository: WatchProgressRepository
++    private lateinit var editor: PersonalEpisodeEditor
++    private var tick = 1000L
++    private fun ep(s: Int, e: Int, release: String? = "2020-01-01") = PersonalEpisode("show:$s:$e", s, e, "Episode $e", release)
++    private fun playing(s: Int, e: Int, position: Long = 40) = WatchProgress("show", "series", "Show", null, null, null, "show:$s:$e", s, e, null, position, 100, 1)
++    @Before fun setup() {
++        val profiles = mockk<ProfileManager>(); every { profiles.activeProfileId } returns profile
++        val series = mockk<PersonalSeriesPreferences>()
++        val item = SavedLibraryItem("show", "series", "Show", null, PosterShape.POSTER, null, null, null, null, emptyList(), null)
++        val entry = PersonalSeriesEntry(item, followedAt = 1, catalog = PersonalSeriesCatalog(listOf(ep(0,1),ep(1,1),ep(1,2),ep(2,1),ep(2,2,"2999-01-01"),ep(2,3,null)), false, 1))
++        every { series.observe(any()) } answers { flowOf(PersonalSeriesSnapshot(firstArg(), listOf(entry), true)) }
++        val watched = mockk<WatchedItemsPreferences>(); every { watched.observeAllItems(any()) } returns history
++        repository = mockk()
++        every { repository.getAllEpisodeProgress("show", any()) } returns playback
++        coEvery { repository.markAsCompletedBatch(any()) } coAnswers {
++            val items = firstArg<List<WatchProgress>>().map { it.copy(position=100,duration=100,progressPercent=100f,completionConfirmed=true,lastWatched=++tick) }
++            playback.value = playback.value + items.associateBy { it.season!! to it.episode!! }
++            val changed = items.map { it.season to it.episode }.toSet()
++            history.value = history.value.filterNot { (it.season to it.episode) in changed } + items.map { WatchedItem(it.contentId,it.contentType,it.name,it.season,it.episode,it.lastWatched) }
++        }
++        coEvery { repository.removeFromHistoryBatch(any(),any(),any()) } coAnswers {
++            val keys=thirdArg<List<Triple<Int,Int,String?>>>().map { it.first to it.second }.toSet()
++            playback.value=playback.value.filterKeys { it !in keys }
++            history.value=history.value.filterNot { (it.season to it.episode) in keys }
++        }
++        coEvery { repository.saveProgressBatch(any(),any()) } coAnswers {
++            playback.value=playback.value+firstArg<List<WatchProgress>>().associateBy { it.season!! to it.episode!! }
++        }
++        coEvery { repository.restoreEpisodeStates(any(),any(),any(),any(),any()) } coAnswers {
++            val keys=secondArg<List<Triple<Int,Int,String?>>>().map { it.first to it.second }.toSet()
++            playback.value=playback.value.filterKeys { it !in keys }+thirdArg<List<WatchProgress>>().associateBy { it.season!! to it.episode!! }
++            history.value=history.value.filterNot { (it.season to it.episode) in keys }+arg<List<WatchedItem>>(3)
++        }
++        editor=PersonalEpisodeEditor(series,watched,repository,profiles)
++    }
++    @Test fun `through preview excludes specials future unknown and previously watched episodes`() = runBlocking {
++        history.value=listOf(WatchedItem("show","series","Show",1,1,99))
++        val rows=editor.load("show",1).rows
++        assertEquals(listOf("1:1","1:2","2:1","2:2","2:3"),rows.map { it.episode.key })
++        assertEquals(listOf("1:2","2:1"),episodeEditSelection(rows,"2:3",EpisodeEditAction.THROUGH).map { it.episode.key })
++        assertEquals(listOf("2:1"),episodeEditSelection(rows,"2:1",EpisodeEditAction.SEASON).map { it.episode.key })
++        assertTrue(episodeEditSelection(rows,"2:2",EpisodeEditAction.WATCHED).isEmpty())
++    }
++    @Test fun `batch changes only previewed keys and undo restores partial playback`() = runBlocking {
++        val partial=playing(1,2)
++        history.value=listOf(WatchedItem("show","series","Show",1,1,99))
++        playback.value=mapOf((1 to 2) to partial,(3 to 1) to playing(3,1))
++        val changed=editor.apply("show","2:1",EpisodeEditAction.THROUGH,listOf("1:2","2:1"),1)
++        assertEquals(99L,history.value.first { it.season==1&&it.episode==1 }.watchedAt)
++        assertEquals(setOf(1 to 1,1 to 2,2 to 1),history.value.map { it.season to it.episode }.toSet())
++        val reverted=editor.undo("show",changed.undoToken!!,1)
++        assertNull(reverted.undoToken)
++        assertEquals(listOf(1 to 1),history.value.map { it.season to it.episode })
++        assertEquals(partial,playback.value[1 to 2])
++        assertEquals(playing(3,1),playback.value[3 to 1])
++    }
++    @Test fun `stale preview is rejected before any write`() = runBlocking {
++        history.value=listOf(WatchedItem("show","series","Show",1,1,99))
++        val result=runCatching { editor.apply("show","1:2",EpisodeEditAction.THROUGH,listOf("1:1","1:2"),1) }
++        assertTrue(result.isFailure)
++        coVerify(exactly=0) { repository.markAsCompletedBatch(any()) }
++    }
++    @Test fun `undo refuses to erase newer playback but allows unrelated changes`() = runBlocking {
++        val changed=editor.apply("show","1:2",EpisodeEditAction.WATCHED,listOf("1:2"),1)
++        playback.value=playback.value+((1 to 2) to playing(1,2,50).copy(lastWatched=5000))
++        assertTrue(runCatching { editor.undo("show",changed.undoToken!!,1) }.isFailure)
++        assertEquals(50L,playback.value[1 to 2]!!.position)
++        coVerify(exactly=0) { repository.removeFromHistoryBatch(any(),any(),any()) }
++    }
++    @Test fun `unwatch can be reversed and tokens cannot be reused or cross profiles`() = runBlocking {
++        history.value=listOf(WatchedItem("show","series","Show",1,1,99))
++        val partial=playing(1,1,40).copy(lastWatched=120)
++        playback.value=mapOf((1 to 1) to partial)
++        val changed=editor.apply("show","1:1",EpisodeEditAction.UNWATCHED,listOf("1:1"),1)
++        assertFalse(changed.rows.first().watched)
++        profile.value=2
++        assertTrue(runCatching { editor.undo("show",changed.undoToken!!,2) }.isFailure)
++        profile.value=1
++        assertTrue(editor.undo("show",changed.undoToken!!,1).rows.first().watched)
++        assertEquals(99L,history.value.single().watchedAt)
++        assertEquals(partial,playback.value[1 to 1])
++        assertTrue(runCatching { editor.undo("show",changed.undoToken!!,1) }.isFailure)
++    }
++    @Test fun `simultaneous confirmations cannot mark the same preview twice`() = runBlocking {
++        val results=(1..2).map { async { runCatching { editor.apply("show","1:2",EpisodeEditAction.WATCHED,listOf("1:2"),1) } } }.awaitAll()
++        assertEquals(1,results.count { it.isSuccess })
++        coVerify(exactly=1) { repository.markAsCompletedBatch(any()) }
++    }
++}
+diff --git a/docs/EXPERIENCE.md b/docs/EXPERIENCE.md
+--- a/docs/EXPERIENCE.md
++++ b/docs/EXPERIENCE.md
+@@ -35,17 +35,34 @@
+ 
+ Consultas periódicas sem mudança não remontam as listas nem destroem o foco. O painel não atualiza a lista enquanto o seletor de posição está aberto. O estado enviado contém resumos de acompanhamento, sem transferir o catálogo completo de episódios a cada consulta.
+ 
+-Esta conexão ainda exige a mesma rede e a central aberta na TV. A paridade completa de todas as preferências e correções de progresso permanece pendente.
++Esta conexão ainda exige a mesma rede e a central aberta na TV. A paridade completa de todas as preferências permanece pendente.
++
++## Correção de episódios
++
++Na TV: Séries → selecione uma série acompanhada → Organizar (+) → Corrigir episódios. No painel do celular: Séries → Corrigir episódios. O acompanhamento precisa ter carregado o catálogo da série; a tela informa quando os episódios ainda não estão disponíveis.
++
++- Escolher temporada e episódio, marcar visto ou não visto, usar Já vi até aqui ou Marcar temporada.
++- Conferir a quantidade e os episódios atingidos antes de confirmar; Cancelar e Voltar descartam a prévia.
++- Já vi até aqui inclui o episódio escolhido e temporadas anteriores. As marcações excluem episódios futuros, sem data confirmada, especiais e os que já estão vistos.
++- Desfazer restaura as datas do histórico e a posição parcial anteriores, preservando episódios fora da correção. Se houver reprodução ou alteração posterior nos mesmos episódios, o app recusa o desfazer antigo.
++- A última correção pode ser desfeita durante a sessão, inclusive ao alternar TV e celular. Outra correção substitui essa possibilidade; reiniciar o app a encerra, preservando as alterações já salvas.
++- Uma prévia desatualizada é recusada antes da gravação. O painel recarrega o progresso para nova conferência.
++
++A gravação e a restauração usam o repositório do player e o perfil original. O acompanhamento e as pendências leem esse mesmo histórico; as datas da Agenda continuam vindo do catálogo. O catálogo de episódios só é enviado ao painel quando o editor está aberto. Corrigir episódios não muda a intenção de acompanhar nem a fila de filmes.
++
++Não foi acrescentado serviço em segundo plano nem outro cache de catálogo. O desfazer guarda uma única correção em memória. A restauração em provedores externos não foi testada; esta etapa não implementa escrita Letterboxd.
+ 
+ ## Validação
+ 
+-84 testes automatizados passaram, além de 8 cenários de contrato DOM do painel móvel. O relatório detalhado acompanha o patch. Testes cobrem separação pessoal/descoberta, histórico, agrupamento de séries, não duplicação de títulos, persistência da ordem após reiniciar o DataStore e navegação por teclas. Capturas são da interface nativa renderizada em Robolectric com dados de teste, não do Chromecast de Pedro.
++98 testes automatizados passaram na rodada atual, sem falhas ou testes ignorados, além dos dois scripts de contrato DOM do painel móvel. Testes cobrem separação pessoal/descoberta, histórico, agrupamento de séries, não duplicação de títulos, persistência da ordem após reiniciar o DataStore e navegação por teclas. Para episódios: seleção em lote, conflitos, confirmação única, restauração exata de datas e posição parcial, isolamento de perfil, prévia/cancelamento e foco em episódios futuros. Capturas são da interface nativa renderizada em Robolectric com dados de teste, não do Chromecast de Pedro.
+ 
+ O script `tools/check-personal-phone.cjs` verifica o contrato DOM do painel: seções, listas distintas, cancelamento, movimento, acompanhamento, rever, foco após atualização e erro sem perda do estado. Executar com Node e `jsdom@26.1.0` disponível em `NODE_PATH`. Essa dependência é apenas de teste e não entra no APK. Não equivale a validação física no Safari.
+ 
++O script `tools/check-personal-episodes.cjs` acrescenta abertura/fechamento do editor, seleção, episódio futuro bloqueado, prévia/cancelamento, confirmação sem duplicação, desfazer e atualização após conflito. O relatório `validacao-progresso-series.json` acompanha o segundo patch, aplicado depois de `experiencia-sobre-0.4.1.patch`.
++
+ ## Sequência de evolução antes do acabamento visual
+ 
+-1. Completar correções de progresso de séries e histórico, com desfazer, incluindo ações equivalentes no celular.
++1. Ampliar os acessos à correção de episódios nas telas herdadas e completar correções de histórico de filmes. A edição de séries acompanhadas com prévia e desfazer está implementada na TV e no painel.
+ 2. Completar preferências de reprodução/fontes nas duas interfaces e recuperação da biblioteca.
+ 3. Implementar escolhas por tempo disponível e coleções com fontes reais; uma lista ordenada por nota não será chamada de Top 250 IMDb oficial.
+ 4. Resolver escrita e importação Letterboxd. O piloto publicado tem conexão/leitura; login real, leitura ao vivo e envio automático ainda não estão validados. O envio automático de avaliações e importação de watchlist/favoritos não estão implementados.
+diff --git a/tools/check-personal-episodes.cjs b/tools/check-personal-episodes.cjs
+new file mode 100644
+--- /dev/null
++++ b/tools/check-personal-episodes.cjs
+@@ -0,0 +1,37 @@
++const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
++const {JSDOM,VirtualConsole}=require('jsdom');
++(async()=>{
++ const ep=(s,e,watched=false,released=true)=>({episode:{id:`show:${s}:${e}`,season:s,episode:e,title:`Episódio ${e}`},watched,released});
++ const original=[ep(1,1,true),ep(1,2),ep(2,1),ep(2,2,false,false)];
++ const item={id:'show',type:'series',name:'Minha série'};
++ const state={version:'test',availableMB:300,library:{items:[],queueKeys:[]},series:{entries:[{item,mode:'FOLLOWING',label:'Pendentes'}]},history:[],searchResults:[]};
++ const posts=[],errors=[];let stale=false;
++ const dom=new JSDOM(fs.readFileSync(path.join(__dirname,'../app/src/main/assets/personal/phone.html'),'utf8'),{url:'https://cinema.test/',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:new VirtualConsole().on('jsdomError',e=>errors.push(e.message)),beforeParse(w){
++  w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};
++  w.fetch=async(url,options)=>{if(url==='/api/state')return{ok:true,json:async()=>JSON.parse(JSON.stringify(state))};const b=JSON.parse(options.body);posts.push(b);
++   if(b.action==='episodeOpen')state.episodeEditor={id:'show',name:'Minha série',rows:JSON.parse(JSON.stringify(original))};
++   if(b.action==='episodeEdit'){
++    if(stale){state.episodeEditor.rows[1].watched=true;return{ok:false,json:async()=>({error:'O progresso mudou. Confira a prévia e confirme novamente.'})}}
++    state.episodeEditor.rows.forEach(r=>{if(b.expectedKeys.includes(`${r.episode.season}:${r.episode.episode}`))r.watched=b.operation!=='UNWATCHED'});
++    state.episodeEditor.undoToken='undo-1';state.episodeEditor.undoLabel='2 episódios marcados';
++   }
++   if(b.action==='episodeUndo'){assert.equal(b.token,'undo-1');state.episodeEditor.rows=JSON.parse(JSON.stringify(original));delete state.episodeEditor.undoToken;delete state.episodeEditor.undoLabel}
++   if(b.action==='episodeClose')delete state.episodeEditor;
++   return{ok:true,json:async()=>({ok:true})};};
++ }});
++ try{
++  const d=dom.window.document,$=s=>d.querySelector(s),flush=()=>new Promise(r=>setImmediate(r)),change=(id,value)=>{$(id).value=value;$(id).dispatchEvent(new dom.window.Event('change'))};
++  await flush();$('[data-tab="series"]').click();[...$('#series').querySelectorAll('button')].find(b=>b.textContent==='Corrigir episódios').click();await flush();
++  assert.equal($('#episodes').open,true);assert.equal(posts[0].action,'episodeOpen');
++  change('#epseason','2');change('#epnumber','2:2');assert.equal($('#eptoggle').disabled,true);
++  $('#epthrough').click();assert.ok($('#epcount').textContent.includes('2 episódios'));$('#epcancel').click();assert.equal(posts.length,1);
++  $('#epthrough').click();$('#epconfirm').click();$('#epconfirm').click();await flush();
++  assert.deepEqual(posts[1],{action:'episodeEdit',id:'show',key:'2:2',operation:'THROUGH',expectedKeys:['1:2','2:1']});assert.equal(posts.length,2);
++  assert.equal($('#eptoggle').disabled,true);assert.equal($('#epundo').hidden,false);assert.equal(state.episodeEditor.rows.at(-1).watched,false);
++  $('#epundo').click();await flush();assert.equal(posts.at(-1).action,'episodeUndo');assert.equal($('#epundo').hidden,true);
++  stale=true;change('#epseason','1');change('#epnumber','1:2');$('#eptoggle').click();$('#epconfirm').click();await flush();
++  assert.ok($('#epmessage').textContent.includes('O progresso mudou'));assert.equal($('#epstatus').textContent,'Visto');assert.equal($('#eppreview').hidden,true);
++  $('#epclose').click();await flush();assert.equal($('#episodes').open,false);assert.equal(state.episodeEditor,undefined);
++  assert.deepEqual(errors,[]);console.log('PASS: painel de episódios — abrir, seleção, futuros bloqueados, prévia/cancelar, confirmação única, desfazer, conflito atualizado e fechar.');
++ }finally{dom.window.close()}
++})().catch(e=>{console.error(e);process.exitCode=1});

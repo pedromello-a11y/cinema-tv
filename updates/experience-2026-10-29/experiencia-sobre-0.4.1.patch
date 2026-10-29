@@ -1,0 +1,1175 @@
+--- a/app/src/main/assets/personal/phone.html
++++ b/app/src/main/assets/personal/phone.html
+@@ -1,13 +1,37 @@
+-<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Seu cinema</title>
+-<style>:root{color-scheme:dark;--bg:#080c0e;--surface:#141a1c;--ink:#f4f5ef;--muted:#b8bdba;--green:#c5f58a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,sans-serif}main{max-width:760px;padding:32px 20px 70px;margin:auto}h1{font-size:38px;font-weight:550;letter-spacing:-1.4px;line-height:1.05}h2{font-size:23px;letter-spacing:-.5px;margin-top:38px}p{color:var(--muted);line-height:1.5}button,input{font:inherit;border:1px solid #39413f;background:var(--surface);color:var(--ink);border-radius:22px;padding:10px 15px;min-height:44px}button:focus-visible,input:focus-visible{outline:2px solid var(--green)}button{cursor:pointer}button.primary{background:var(--green);color:var(--bg);border-color:var(--green)}button:disabled{opacity:.45}article{display:flex;gap:15px;padding:18px 0;border-bottom:1px solid #263033}article img{width:70px;aspect-ratio:2/3;object-fit:contain;border-radius:7px;align-self:flex-start}article h3{font-size:17px;margin:0 0 12px}article>div{min-width:0;flex:1}.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{font-size:13px;padding:8px 12px}#status{position:sticky;top:0;background:var(--bg);color:var(--green);padding:12px 0;z-index:2}input{width:100%;margin:10px 0}small{color:var(--muted)}details{margin-top:35px}summary{cursor:pointer;color:var(--muted)}</style>
+-<main><small id="version">CINEMA · CONECTADO À SUA TV</small><h1>Mais tempo<br>para assistir.</h1><p>Suas listas, na ordem que você escolher.</p><div id="status" role="status" aria-live="polite"></div><h2>Buscar e salvar</h2><form id="searchform"><label>Filme ou série<input id="query" required minlength="2" maxlength="100" placeholder="O que você quer assistir?"></label><div class="actions"><button type="submit" name="type" value="movie" class="primary">Buscar filmes</button><button type="submit" name="type" value="series">Buscar séries</button></div></form><section id="results"></section><h2>Próximos da fila</h2><section id="queue"></section><h2>Quero ver</h2><section id="watchlist"></section><h2>Minhas séries</h2><section id="series"></section><h2>Preferências</h2><button id="defaults">Áudio original + legendas em português</button><details><summary>Canal de atualizações</summary><p>Use somente o endereço do canal preparado para este aplicativo. A TV verifica o arquivo e a assinatura antes de instalar.</p><label>Endereço HTTPS<input id="feed" type="url" inputmode="url" placeholder="https://…/latest.json"></label><button id="savefeed">Conectar canal</button></details><p><small id="storage"></small></p></main>
++<!doctype html>
++<html lang="pt-BR">
++<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Seu cinema</title>
++<style>
++:root{color-scheme:dark;--bg:#080c0e;--surface:#141a1c;--ink:#f4f5ef;--muted:#b8bdba;--green:#c5f58a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,sans-serif}main{max-width:760px;padding:32px 20px 70px;margin:auto}h1{font-size:34px;font-weight:550;letter-spacing:-1px;line-height:1.1}h2{font-size:22px;letter-spacing:-.5px;margin-top:30px}p{color:var(--muted);line-height:1.5}button,input,select{font:inherit;border:1px solid #39413f;background:var(--surface);color:var(--ink);border-radius:22px;padding:10px 15px;min-height:44px}button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green)}button{cursor:pointer}button.primary,button[aria-pressed=true]{background:var(--green);color:var(--bg);border-color:var(--green)}button:disabled{opacity:.45}article{display:flex;gap:15px;padding:18px 0;border-bottom:1px solid #263033}article img{width:70px;aspect-ratio:2/3;object-fit:contain;border-radius:7px;align-self:flex-start}article h3{font-size:17px;margin:0 0 8px}article>div{min-width:0;flex:1}.actions,nav{display:flex;gap:7px;flex-wrap:wrap}.actions button{font-size:13px;padding:8px 12px}#status{position:sticky;top:0;background:var(--bg);color:var(--green);padding:12px 0;z-index:2}input{width:100%;margin:10px 0}small{color:var(--muted)}details{margin-top:35px}summary{cursor:pointer;color:var(--muted)}dialog{background:var(--surface);color:var(--ink);border:1px solid #39413f;border-radius:18px;max-width:calc(100vw - 32px);width:420px;padding:24px}dialog::backdrop{background:#000a}dialog select{width:100%;margin:14px 0 20px}[hidden]{display:none!important}
++</style>
++<main>
++<small id="version">CINEMA · CONECTADO À SUA TV</small><h1>Seu cinema.</h1>
++<nav aria-label="Seções"><button data-tab="movies" aria-pressed="true">Filmes</button><button data-tab="series" aria-pressed="false">Séries</button><button data-tab="history" aria-pressed="false">Histórico</button><button data-tab="settings" aria-pressed="false">Ajustes</button></nav>
++<div id="status" role="status" aria-live="polite"></div>
++<section id="search"><h2>Buscar para salvar</h2><form id="searchform"><label>Título<input id="query" required minlength="2" maxlength="100" placeholder="O que você quer assistir?"></label><div class="actions"><button type="submit" class="primary" id="searchbutton">Buscar filmes</button></div></form><section id="results" aria-label="Resultados da busca"></section></section>
++<section data-panel="movies"><h2>Próximos da fila</h2><p>Você escolhe os filmes e a ordem. Tirar da fila mantém o título em Quero ver.</p><section id="queue"></section><h2>Outros de Quero ver</h2><section id="watchlist"></section></section>
++<section data-panel="series" hidden><h2>Acompanhando</h2><section id="series"></section><h2>Séries para ver</h2><section id="savedseries"></section></section>
++<section data-panel="history" hidden><h2>Filmes assistidos</h2><p>Seu histórico continua aqui. Salvar para rever cria uma nova intenção em Quero ver.</p><section id="history"></section></section>
++<section data-panel="settings" hidden><h2>Preferências</h2><button id="defaults">Áudio original + legendas em português</button><details><summary>Canal de atualizações</summary><p>A TV verifica o arquivo e a assinatura antes de instalar.</p><label>Endereço HTTPS<input id="feed" type="url" inputmode="url" placeholder="https://…/latest.json"></label><button id="savefeed">Conectar canal</button></details><p><small id="storage"></small></p></section>
++<p><small>As alterações são salvas na TV. Mantenha a central aberta enquanto organiza pelo celular.</small></p>
++</main>
++<dialog id="mover" aria-labelledby="movetitle"><h2 id="movetitle">Mover na fila</h2><p id="moviename"></p><form id="moveform"><label>Nova posição<select id="position"></select></label><div class="actions"><button type="submit" class="primary">Salvar posição</button><button type="button" id="cancelmove">Cancelar</button></div></form></dialog>
+ <script>
+-const token='__PAIRING_TOKEN__';const status=document.querySelector('#status');let working=false;
++const token='__PAIRING_TOKEN__';const status=document.querySelector('#status');let working=false,currentTab='movies',snapshot=null,fingerprint='',moving=null;
+ async function request(path,body){const r=await fetch(path,{method:body?'POST':'GET',headers:{'X-Cinema-Token':token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});if(!r.ok){let e;try{e=await r.json()}catch{}throw Error(e?.error||'A conexão expirou. Reabra o QR Code na TV.')}return r.json()}
+ function button(text,action){const b=document.createElement('button');b.textContent=text;b.onclick=action;return b}
+-async function act(data){if(working)return;working=true;status.textContent='Salvando…';document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await request('/api/action',data);await refresh();status.textContent=data.action==='search'?(document.querySelector('#results').children.length?'Escolha o que você quer salvar.':'Nenhum título encontrado.'):'Salvo na TV.'}catch(e){status.textContent=e.message}finally{working=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
+-function card(item,actions){const a=document.createElement('article');if(item.poster){try{if(new URL(item.poster).protocol==='https:'){const img=document.createElement('img');img.src=item.poster;img.alt='Capa de '+item.name;img.loading='lazy';a.append(img)}}catch{}}const d=document.createElement('div'),h=document.createElement('h3'),buttons=document.createElement('div');h.textContent=item.name;buttons.className='actions';for(const [label,op]of actions){buttons.append(button(label,()=>act({id:item.id,type:item.type,...op})))}d.append(h,buttons);a.append(d);return a}
++async function act(data){if(working)return;working=true;status.textContent=data.action==='search'?'Buscando…':'Salvando…';document.querySelectorAll('button').forEach(b=>b.disabled=true);try{await request('/api/action',data);await refresh();status.textContent=data.action==='search'?((snapshot.searchResults||[]).length?'Escolha o que você quer salvar.':'Nenhum título encontrado.'):'Salvo na TV.'}catch(e){status.textContent=e.message}finally{working=false;document.querySelectorAll('button').forEach(b=>b.disabled=false)}}
++function card(item,actions,context=''){const a=document.createElement('article');if(item.poster){try{if(new URL(item.poster).protocol==='https:'){const img=document.createElement('img');img.src=item.poster;img.alt='Capa de '+item.name;img.loading='lazy';a.append(img)}}catch{}}const d=document.createElement('div'),h=document.createElement('h3'),buttons=document.createElement('div');h.textContent=item.name;buttons.className='actions';d.append(h);if(context){const p=document.createElement('p');p.textContent=context;d.append(p)}for(const [label,op]of actions){buttons.append(button(label,typeof op==='function'?op:()=>act({id:item.id,type:item.type,...op})))}d.append(buttons);a.append(d);return a}
+ function empty(section,text){if(!section.children.length){const p=document.createElement('p');p.textContent=text;section.append(p)}}
+-async function refresh(){const data=await request('/api/state');document.querySelector('#version').textContent='CINEMA · '+data.version;document.querySelector('#storage').textContent=data.availableMB+' MB livres na TV';for(const id of ['queue','watchlist','series','results'])document.getElementById(id).replaceChildren();for(const item of data.searchResults||[]){const actions=[['Quero ver',{action:'saveResult'}]];actions.push(item.type==='movie'?['Próximos da fila',{action:'queueResult'}]:['Acompanhar',{action:'followResult'}]);document.querySelector('#results').append(card(item,actions))}const items=data.library.items,keys=data.library.queueKeys;const queue=document.querySelector('#queue'),watch=document.querySelector('#watchlist'),series=document.querySelector('#series');keys.forEach((key,i)=>{const item=items.find(x=>x.type.toLowerCase()+':'+x.id===key);if(item){const actions=[];if(i>0)actions.push(['↑ Antes',{action:'earlier'}]);if(i<keys.length-1)actions.push(['↓ Depois',{action:'later'}]);actions.push(['Tirar da fila',{action:'dequeue'}]);queue.append(card(item,actions))}});for(const item of items){const actions=[];if(item.type==='movie'&&!keys.includes('movie:'+item.id))actions.push(['Próximos da fila',{action:'enqueue'}]);actions.push(['Remover de Quero ver',{action:'remove'}]);watch.append(card(item,actions))}for(const entry of data.series.entries.filter(e=>e.mode!=='STOPPED')){series.append(card(entry.item,[[entry.mode==='FOLLOWING'?'Pausar':'Acompanhar',{action:'series',mode:entry.mode==='FOLLOWING'?'PAUSED':'FOLLOWING'}],['Deixar de acompanhar',{action:'series',mode:'STOPPED'}]]))}empty(queue,'Escolha filmes de Quero ver para montar sua próxima sessão.');empty(watch,'Busque um filme acima ou salve um título na TV.');empty(series,'As séries que você acompanha aparecerão aqui.')}
+-document.querySelector('#searchform').onsubmit=e=>{e.preventDefault();act({action:'search',query:document.querySelector('#query').value.trim(),type:e.submitter?.value||'movie'})};document.querySelector('#defaults').onclick=()=>act({action:'playbackDefaults'});document.querySelector('#savefeed').onclick=()=>act({action:'feed',url:document.querySelector('#feed').value.trim()});refresh().catch(e=>status.textContent=e.message);
++function move(item,index){moving=item;const select=document.querySelector('#position');select.replaceChildren();snapshot.library.queueKeys.forEach((_,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent=(i+1)+' de '+snapshot.library.queueKeys.length;select.append(option)});select.value=String(index);document.querySelector('#moviename').textContent=item.name;document.querySelector('#mover').showModal();select.focus()}
++function render(){if(!snapshot)return;const data=snapshot;for(const id of ['queue','watchlist','series','savedseries','history','results'])document.getElementById(id).replaceChildren();const items=data.library.items,keys=data.library.queueKeys,queue=document.querySelector('#queue'),watch=document.querySelector('#watchlist'),series=document.querySelector('#series'),saved=document.querySelector('#savedseries'),history=document.querySelector('#history');
++for(const item of data.searchResults||[]){if(item.type!==(currentTab==='series'?'series':'movie'))continue;const actions=[['Quero ver',{action:'saveResult'}]];actions.push(item.type==='movie'?['Próximos da fila',{action:'queueResult'}]:['Acompanhar',{action:'followResult'}]);document.querySelector('#results').append(card(item,actions))}
++keys.forEach((key,i)=>{const item=items.find(x=>x.type.toLowerCase()+':'+x.id===key);if(item)queue.append(card(item,[['Mover',()=>move(item,i)],['Tirar da fila',{action:'dequeue'}]],(i+1)+'º da fila'))});
++for(const item of items){if(item.type==='movie'&&!keys.includes('movie:'+item.id))watch.append(card(item,[['Próximos da fila',{action:'enqueue'}],['Remover de Quero ver',{action:'remove'}]]));if(item.type==='series'){const entry=data.series.entries.find(e=>e.item.id===item.id);const actions=[];if(entry?.mode!=='FOLLOWING')actions.push([entry?.mode==='PAUSED'?'Retomar':'Acompanhar',{action:'followSaved'}]);actions.push(['Remover de Quero ver',{action:'remove'}]);saved.append(card(item,actions,entry?.mode==='FOLLOWING'?'Também acompanhando':''))}}
++for(const entry of data.series.entries.filter(e=>e.mode!=='STOPPED')){series.append(card(entry.item,[[entry.mode==='FOLLOWING'?'Pausar':'Retomar',{action:'series',mode:entry.mode==='FOLLOWING'?'PAUSED':'FOLLOWING'}],['Deixar de acompanhar',{action:'series',mode:'STOPPED'}]],entry.label||''))}
++for(const item of data.history||[])history.append(card(item,[['Salvar para rever',{action:'saveWatched'}]],'Visto em '+new Date(item.watchedAt).toLocaleDateString('pt-BR')));
++empty(queue,'Escolha filmes de Quero ver para montar sua próxima sessão.');empty(watch,'Busque um filme acima ou salve um título na TV.');empty(series,'Escolha Acompanhar nos resultados da busca ou nos detalhes da série na TV.');empty(saved,'As séries salvas para depois aparecem aqui.');empty(history,'Os filmes concluídos aparecem aqui.');}
++async function refresh(){const data=await request('/api/state');document.querySelector('#version').textContent='CINEMA · '+data.version;document.querySelector('#storage').textContent=data.availableMB+' MB livres na TV';const next=JSON.stringify([data.library,data.series,data.history,data.searchResults]);snapshot=data;if(next!==fingerprint){fingerprint=next;render()}}
++function tab(name){currentTab=name;document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.tab===name)));document.querySelectorAll('[data-panel]').forEach(p=>p.hidden=p.dataset.panel!==name);document.querySelector('#search').hidden=name==='history'||name==='settings';document.querySelector('#searchbutton').textContent=name==='series'?'Buscar séries':'Buscar filmes';render()}
++document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));document.querySelector('#searchform').onsubmit=e=>{e.preventDefault();act({action:'search',query:document.querySelector('#query').value.trim(),type:currentTab==='series'?'series':'movie'})};document.querySelector('#defaults').onclick=()=>act({action:'playbackDefaults'});document.querySelector('#savefeed').onclick=()=>act({action:'feed',url:document.querySelector('#feed').value.trim()});document.querySelector('#cancelmove').onclick=()=>{document.querySelector('#mover').close();moving=null};document.querySelector('#moveform').onsubmit=e=>{e.preventDefault();const item=moving;if(!item)return;document.querySelector('#mover').close();moving=null;act({action:'move',id:item.id,type:'movie',position:Number(document.querySelector('#position').value)})};refresh().catch(e=>status.textContent=e.message);setInterval(()=>{if(!working&&!document.hidden&&!document.querySelector('#mover').open)refresh().catch(e=>status.textContent=e.message)},5000);
+ </script></html>
+--- a/app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt
+@@ -21,6 +21,7 @@
+ import com.nuvio.tv.domain.model.WatchedItem
+ import com.nuvio.tv.domain.model.personalLibraryKey
+ import com.nuvio.tv.domain.model.sanitizePersonalQueue
++import com.nuvio.tv.domain.model.movePersonalQueueTo
+ import com.nuvio.tv.domain.model.movePersonalQueue
+ import com.nuvio.tv.domain.model.newlyCompletedSavedMovies
+ import kotlinx.coroutines.ExperimentalCoroutinesApi
+@@ -95,6 +96,13 @@
+         }
+     }
+ 
++    suspend fun movePersonalMovieTo(itemId: String, position: Int, profileId: Int) {
++        store(profileId).edit { preferences ->
++            val queue = sanitizePersonalQueue(preferences.toLibrarySyncState().items, preferences.readPersonalQueue())
++            preferences[personalQueueKey] = gson.toJson(movePersonalQueueTo(queue, personalLibraryKey(itemId, "movie"), position))
++        }
++    }
++
+     /** Retain watched history and allow an old favorite to be saved again for a rewatch. */
+     suspend fun removePersonalCompletedMovies(watched: List<WatchedItem>, profileId: Int) {
+         store(profileId).edit { preferences ->
+--- a/app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt
++++ b/app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt
+@@ -5,7 +5,8 @@
+     val profileId: Int = 1,
+     val items: List<SavedLibraryItem> = emptyList(),
+     val queueKeys: List<String> = emptyList(),
+-    val ready: Boolean = false
++    val ready: Boolean = false,
++    val history: List<WatchedItem> = emptyList()
+ ) {
+     val queuedMovies: List<SavedLibraryItem>
+         get() {
+@@ -30,6 +31,14 @@
+     return keys.toMutableList().apply { add(to, removeAt(from)) }
+ }
+ 
++/** Move once, preserving all other priorities and adapting to a concurrently shortened queue. */
++fun movePersonalQueueTo(keys: List<String>, key: String, targetIndex: Int): List<String> {
++    val from = keys.indexOf(key)
++    if (from < 0 || targetIndex < 0) return keys
++    val to = targetIndex.coerceAtMost(keys.lastIndex)
++    return keys.toMutableList().apply { add(to, removeAt(from)) }
++}
++
+ fun newlyCompletedSavedMovies(items: List<SavedLibraryItem>, watched: List<WatchedItem>): List<SavedLibraryItem> {
+     val latest = watched.filter { it.contentType.equals("movie", true) && it.season == null && it.episode == null }
+         .groupBy { it.contentId }.mapValues { (_, values) -> values.maxOf { it.watchedAt } }
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaBrowseSection.kt
+@@ -0,0 +1,21 @@
++package com.nuvio.tv.ui.personal
++
++internal enum class CinemaBrowseSection { PERSONAL, SAVED, DISCOVER, HISTORY }
++
++internal fun cinemaSections(tab: Int): List<Pair<CinemaBrowseSection, String>> = when(tab) {
++    1 -> listOf(CinemaBrowseSection.PERSONAL to "Quero ver", CinemaBrowseSection.DISCOVER to "Descobrir", CinemaBrowseSection.HISTORY to "Histórico")
++    2 -> listOf(CinemaBrowseSection.PERSONAL to "Acompanhando", CinemaBrowseSection.SAVED to "Quero ver", CinemaBrowseSection.DISCOVER to "Descobrir")
++    else -> emptyList()
++}
++
++internal data class CinemaEmptyState(val title: String, val description: String, val action: String)
++internal fun cinemaEmptyState(tab: Int, section: CinemaBrowseSection, loading: Boolean, hasCatalogs: Boolean): CinemaEmptyState = when {
++    loading -> CinemaEmptyState("Preparando sua sessão", "Suas listas e episódios estão sendo carregados.", "Buscar um título")
++    section == CinemaBrowseSection.DISCOVER && !hasCatalogs -> CinemaEmptyState("Nenhum catálogo disponível", "Confira seus add-ons ou tente carregar novamente.", "Gerenciar add-ons")
++    section == CinemaBrowseSection.DISCOVER -> CinemaEmptyState("Nada nesta categoria por enquanto", "Você pode buscar um título ou revisar os catálogos instalados.", "Buscar um título")
++    section == CinemaBrowseSection.HISTORY -> CinemaEmptyState("Seu histórico começa aqui", "Os filmes concluídos aparecem aqui, mesmo depois de sair de Quero ver.", "Descobrir filmes")
++    tab == 2 && section == CinemaBrowseSection.SAVED -> CinemaEmptyState("Séries para mais tarde", "Salve uma série em Quero ver. Quando decidir acompanhar, ela terá episódios e agenda próprios.", "Descobrir séries")
++    tab == 2 -> CinemaEmptyState("Escolha suas próximas séries", "Use Acompanhar para reunir episódios pendentes, séries em dia e pausadas.", "Descobrir séries")
++    tab == 1 -> CinemaEmptyState("O que você quer ver?", "Salve filmes em Quero ver e escolha os prioritários para Próximos da fila.", "Descobrir filmes")
++    else -> CinemaEmptyState("Seu próximo momento de cinema", "Continue filmes e séries por aqui. Suas escolhas ficam em Filmes e Séries.", "Explorar filmes")
++}
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaHomeScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaHomeScreen.kt
+@@ -10,6 +10,7 @@
+ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+ import androidx.compose.foundation.interaction.MutableInteractionSource
+ import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.lazy.LazyListState
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyRow
+ import androidx.compose.foundation.lazy.itemsIndexed
+@@ -23,6 +24,8 @@
+ import androidx.compose.material.icons.outlined.PeopleOutline
+ import androidx.compose.runtime.*
+ import androidx.compose.runtime.saveable.rememberSaveable
++import androidx.compose.runtime.saveable.listSaver
++import androidx.compose.runtime.snapshots.SnapshotStateMap
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.draw.clip
+@@ -86,18 +89,27 @@
+     onSeeAll: (CatalogRow) -> Unit = {}
+ ) {
+     var tab by rememberSaveable { mutableIntStateOf(0) }
+-    var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
+-    var selectedRow by rememberSaveable { mutableStateOf<String?>(null) }
++    var movieSectionName by rememberSaveable { mutableStateOf(CinemaBrowseSection.PERSONAL.name) }
++    var seriesSectionName by rememberSaveable { mutableStateOf(CinemaBrowseSection.PERSONAL.name) }
++    val section = CinemaBrowseSection.entries.firstOrNull { it.name == when(tab) { 1 -> movieSectionName; 2 -> seriesSectionName; else -> CinemaBrowseSection.PERSONAL.name } } ?: CinemaBrowseSection.PERSONAL
++    val scope = "$tab/${section.name}"
++    val bookmarks = rememberSaveable(saver = listSaver<SnapshotStateMap<String, String>, String>(
++        save = { it.entries.flatMap { entry -> listOf(entry.key, entry.value) } },
++        restore = { it.chunked(2).map { entry -> entry[0] to entry[1] }.toMutableStateMap() }
++    )) { mutableStateMapOf<String, String>() }
++    val selectedKey = bookmarks["$scope/item"]
++    val selectedRow = bookmarks["$scope/row"]
+     var navigationFocused by remember { mutableStateOf(false) }
+-    var restored by remember { mutableStateOf(false) }
++    var restored by remember(scope) { mutableStateOf(false) }
+     var showSocialPanel by remember { mutableStateOf(false) }
+     var showRecentSocial by remember { mutableStateOf(false) }
+     var showControlCenter by remember { mutableStateOf(false) }
+     var listTarget by remember { mutableStateOf<CinemaTitle?>(null) }
+     var clock by remember { mutableLongStateOf(System.currentTimeMillis()) }
+-    var pendingFocus by remember { mutableStateOf<CinemaFocusTarget?>(null) }
++    var pendingFocus by remember(scope) { mutableStateOf<CinemaFocusTarget?>(null) }
++    var actionHint by remember(scope) { mutableStateOf<String?>(null) }
+     LaunchedEffect(Unit) { while(true) { delay(30_000); clock = System.currentTimeMillis() } }
+-    val rows = remember(state.catalogRows, state.continueWatchingItems, tab, library, series) { cinemaRows(state, tab, library, series) }
++    val rows = remember(state.catalogRows, state.continueWatchingItems, tab, library, series, section) { cinemaRows(state, tab, library, series, section) }
+     val resolvedRow = rows.firstOrNull { it.key == selectedRow && it.titles.any { title -> title.key == selectedKey } }
+         ?: rows.firstOrNull { it.titles.any { title -> title.key == selectedKey } } ?: rows.firstOrNull()
+     val selected = resolvedRow?.titles?.firstOrNull { it.key == selectedKey } ?: resolvedRow?.titles?.firstOrNull()
+@@ -108,9 +120,11 @@
+     val listsButton = remember { FocusRequester() }
+     val agendaEntry = remember { FocusRequester() }
+     val navButtons = remember { List(CinemaDestination.entries.size) { FocusRequester() } }
+-    val vertical = rememberLazyListState()
++    val sectionButtons = remember { CinemaBrowseSection.entries.associateWith { FocusRequester() } }
++    val sections = cinemaSections(tab)
++    val vertical = remember(scope) { LazyListState(rows.indexOfFirst { it.key == selectedRow }.coerceAtLeast(0)) }
+     val coroutine = rememberCoroutineScope()
+-    val focusNavigation = remember(tab) { CinemaFocusNavigation() }
++    val focusNavigation = remember(scope) { CinemaFocusNavigation() }
+     var verticalScrollJob by remember { mutableStateOf<Job?>(null) }
+     val horizontalBringIntoView = LocalBringIntoViewSpec.current
+     val manualVerticalBringIntoView = remember { object : BringIntoViewSpec {
+@@ -136,6 +150,12 @@
+         else if(selected != null) { if(!focus(restoreCard)) focus(firstCard) }
+         else focus(playButton)
+     }
++    fun openSection(newSection: CinemaBrowseSection) {
++        verticalScrollJob?.cancel()
++        navigationFocused = false
++        if(tab == 2) seriesSectionName = newSection.name else movieSectionName = newSection.name
++    }
++    fun Modifier.actionHelp(text: String) = onFocusChanged { if(it.isFocused) actionHint = text else if(actionHint == text) actionHint = null }
+     fun switchRow(rowIndex: Int, column: Int) {
+         val targetRow = rows.getOrNull(rowIndex) ?: return
+         val target = targetRow.titles.getOrNull(column.coerceAtMost(targetRow.titles.lastIndex)) ?: return
+@@ -144,7 +164,13 @@
+         verticalScrollJob = coroutine.launch { vertical.scrollToItem(rowIndex) }
+     }
+     BackHandler(enabled = !navigationFocused && listTarget == null && !showControlCenter && !showSocialPanel) { enterNavigation() }
+-    LaunchedEffect(tab) { restored = false; if(tab == 3) { withFrameNanos { }; focus(agendaEntry) } }
++    LaunchedEffect(scope) { if(tab == 3) { withFrameNanos { }; focus(agendaEntry) } }
++    LaunchedEffect(scope, rows.map { it.key }) {
++        if(!restored && rows.isNotEmpty()) vertical.scrollToItem(rows.indexOfFirst { it.key == resolvedRow?.key }.coerceAtLeast(0))
++    }
++    LaunchedEffect(scope, rows.isEmpty(), navigationFocused) {
++        if(tab != 3 && rows.isEmpty() && !navigationFocused) { withFrameNanos { }; focus(playButton) }
++    }
+ 
+     BoxWithConstraints(Modifier.fillMaxSize().background(CinemaStyle.Canvas).testTag("cinema-home")) {
+         val heroHeight = maxHeight * .535f
+@@ -192,7 +218,7 @@
+                                 modifier = Modifier.testTag("hero-title"))
+                         }
+                         Spacer(Modifier.height(8.dp))
+-                        val metadata = listOfNotNull(selected.year, selected.runtime,
++                        val metadata = listOfNotNull(selected.year,
+                             selected.rating?.let { "IMDb ${String.format(Locale("pt", "BR"), "%.1f", it)}" },
+                             selected.genres.take(2).joinToString(" · ").takeIf { it.isNotBlank() })
+                         Text(metadata.joinToString("   ·   "), color = CinemaStyle.Muted, fontFamily = CinemaUi, fontSize = 12.sp,
+@@ -206,20 +232,20 @@
+                             if(event.type != KeyEventType.KeyDown) false
+                             else when(event.key) {
+                                 Key.DirectionDown -> { enterContent(); true }
+-                                Key.DirectionUp -> true
++                                Key.DirectionUp -> { sectionButtons[section]?.takeIf { sections.isNotEmpty() }?.let(::focus); true }
+                                 else -> false
+                             }
+                         }, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+-                            CinemaAction(when { selected.resume is ContinueWatchingItem.NextUp -> "Assistir episódio"; selected.resume != null -> "Continuar"; selected.type == "series" -> "Ver episódios"; else -> "Assistir" }, true,
++                            CinemaAction(when { selected.resume is ContinueWatchingItem.NextUp -> "Assistir episódio"; selected.resume != null -> "Continuar"; selected.type == "series" -> "Ver episódios"; section == CinemaBrowseSection.HISTORY -> "Assistir novamente"; else -> "Assistir" }, true,
+                                 Modifier.widthIn(min = 116.dp).focusRequester(playButton).testTag("hero-play").onPreviewKeyEvent { event ->
+                                     if(event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) { enterNavigation(); true } else false
+                                 }, icon = Icons.Filled.PlayArrow) {
+                                 when { selected.resume != null -> onResume(selected.resume); selected.type == "series" -> onDetail(selected.id, selected.type, selected.addon); else -> onPlay(selected.id, selected.type, selected.addon) }
+                             }
+                             CinemaIconAction(if(saved) Icons.Outlined.Check else Icons.Outlined.Add, "Organizar ${selected.name}",
+-                                Modifier.focusRequester(listsButton).testTag("hero-lists"), enabled = library.ready) { listTarget = selected }
+-                            CinemaIconAction(Icons.Outlined.Info, "Detalhes de ${selected.name}", Modifier.testTag("hero-details")) { onDetail(selected.id, selected.type, selected.addon) }
+-                            CinemaIconAction(Icons.Outlined.PeopleOutline, "Atividade dos amigos no Letterboxd", Modifier.testTag("hero-social").onPreviewKeyEvent { event ->
++                                Modifier.focusRequester(listsButton).testTag("hero-lists").actionHelp("Organizar · suas listas e prioridades"), enabled = library.ready) { listTarget = selected }
++                            CinemaIconAction(Icons.Outlined.Info, "Detalhes de ${selected.name}", Modifier.testTag("hero-details").actionHelp(if(selected.type == "series") "Episódios, progresso e detalhes" else "Detalhes e trailer")) { onDetail(selected.id, selected.type, selected.addon) }
++                            CinemaIconAction(Icons.Outlined.PeopleOutline, "Atividade dos amigos no Letterboxd", Modifier.testTag("hero-social").actionHelp(if(selected.type == "movie") "Opiniões dos amigos neste filme" else "Atividade recente dos amigos").onPreviewKeyEvent { event ->
+                                 if(event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight) { showSocialPanel = true; true } else false
+                             }) { showSocialPanel = true }
+                         }
+@@ -230,24 +256,56 @@
+                             "$it min${if(selected.remainingMinutes != null) " restantes" else ""} · termina às $end"
+                         }
+                         val status = selected.statusLabel ?: series.summaries.firstOrNull { it.entry.item.id == selected.id }?.let(::personalSeriesLabel)
+-                        Text(listOfNotNull(selected.episode, timing, status).joinToString(" · "), color = CinemaStyle.Muted, fontFamily = CinemaUi, fontSize = 10.sp,
++                        Text(actionHint ?: listOfNotNull(selected.episode, timing, status).joinToString(" · "), color = CinemaStyle.Muted, fontFamily = CinemaUi, fontSize = 10.sp,
+                             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.height(14.dp))
+-                    } else Column(Modifier.align(Alignment.BottomStart)) {
+-                        Text(if(state.isLoading) "Preparando sua sessão" else "Sua próxima história", fontFamily = CinemaUi, fontSize = 34.sp, color = CinemaStyle.Ink)
++                    } else Column(Modifier.align(Alignment.BottomStart).widthIn(max = 550.dp)) {
++                        val loading = (section == CinemaBrowseSection.DISCOVER && state.isLoading) || (section != CinemaBrowseSection.DISCOVER && (!library.ready || (tab == 2 && section == CinemaBrowseSection.PERSONAL && !series.snapshot.ready)))
++                        val empty = cinemaEmptyState(tab, section, loading, state.catalogRows.isNotEmpty())
++                        Text(empty.title, fontFamily = CinemaUi, fontSize = 32.sp, color = CinemaStyle.Ink)
+                         Spacer(Modifier.height(12.dp))
+-                        Text(if(state.isLoading) "Carregando os catálogos instalados…" else "Adicione seus catálogos para começar.", fontFamily = CinemaUi, fontSize = 15.sp, color = CinemaStyle.Muted)
++                        Text(empty.description, fontFamily = CinemaUi, fontSize = 15.sp, lineHeight = 22.sp, color = CinemaStyle.Muted)
+                         Spacer(Modifier.height(18.dp))
+-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+-                            CinemaAction("Gerenciar add-ons", true, Modifier.focusRequester(playButton), onClick = onAddons)
+-                            if(!state.isLoading) CinemaAction("Tentar novamente", false, onClick = onRetry)
++                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.onPreviewKeyEvent { event ->
++                            if(event.type != KeyEventType.KeyDown) false else when(event.key) {
++                                Key.DirectionUp -> { sectionButtons[section]?.takeIf { sections.isNotEmpty() }?.let(::focus); true }
++                                else -> false
++                            }
++                        }) {
++                            CinemaAction(empty.action, true, Modifier.focusRequester(playButton).testTag("empty-primary").onPreviewKeyEvent { event ->
++                                if(event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) { enterNavigation(); true } else false
++                            }) {
++                                when {
++                                    loading -> onSearch()
++                                    section == CinemaBrowseSection.DISCOVER -> if(state.catalogRows.isEmpty()) onAddons() else onSearch()
++                                    tab == 0 -> { movieSectionName = CinemaBrowseSection.DISCOVER.name; tab = 1 }
++                                    else -> openSection(CinemaBrowseSection.DISCOVER)
++                                }
++                            }
++                            if(tab == 0 && !loading) CinemaAction("Explorar séries", false) { seriesSectionName = CinemaBrowseSection.DISCOVER.name; tab = 2 }
++                            if(section == CinemaBrowseSection.DISCOVER && !state.isLoading) CinemaAction("Tentar novamente", false, onClick = onRetry)
++                        }
++                    }
++                    if(sections.isNotEmpty()) Row(Modifier.align(Alignment.TopStart).padding(top = 8.dp).testTag("browse-sections"), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++                        sections.forEachIndexed { index, (value, label) ->
++                            CinemaAction(label, section == value, Modifier.focusRequester(sectionButtons.getValue(value)).testTag("section-${value.name}")
++                                .onPreviewKeyEvent { event ->
++                                    if(event.type != KeyEventType.KeyDown) false else when(event.key) {
++                                        Key.DirectionUp -> true
++                                        Key.DirectionDown -> { focus(playButton); true }
++                                        Key.DirectionLeft -> if(index == 0) { enterNavigation(); true } else false
++                                        Key.DirectionRight -> index == sections.lastIndex
++                                        else -> false
++                                    }
++                                }) { if(value == section) enterContent() else openSection(value) }
+                         }
+                     }
+                 }
++                key(scope) {
+                 CompositionLocalProvider(LocalBringIntoViewSpec provides manualVerticalBringIntoView) {
+                     LazyColumn(state = vertical, modifier = Modifier.fillMaxWidth().weight(1f).clipToBounds().testTag("cinema-shelves"),
+                         verticalArrangement = Arrangement.spacedBy(18.dp), contentPadding = PaddingValues(bottom = 18.dp)) {
+                         itemsIndexed(rows, key = { _, row -> row.key }) { rowIndex, row ->
+-                            val horizontal = rememberLazyListState()
++                            val horizontal = rememberLazyListState(initialFirstVisibleItemIndex = if(row.key == resolvedRow?.key) row.titles.indexOfFirst { it.key == selectedKey }.coerceAtLeast(0) else 0)
+                             Column {
+                                 Row(Modifier.fillMaxWidth().height(24.dp).padding(start = 48.dp, end = 30.dp).testTag("row-heading-$rowIndex"), verticalAlignment = Alignment.CenterVertically) {
+                                     Text(row.name, color = CinemaStyle.Ink, fontFamily = CinemaUi, fontSize = 17.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+@@ -271,8 +329,8 @@
+                                             if(rowIndex == 0 && index == 0) modifier = modifier.focusRequester(firstCard)
+                                             if(restoreTarget) modifier = modifier.focusRequester(restoreCard)
+                                             if(pendingTarget) modifier = modifier.focusRequester(pendingCard)
+-                                            LaunchedEffect(restoreTarget) {
+-                                                if(restoreTarget && !restored) { withFrameNanos { }; if(focus(restoreCard)) restored = true }
++                                            LaunchedEffect(restoreTarget, navigationFocused, showControlCenter, showSocialPanel, listTarget) {
++                                                if(restoreTarget && !restored && !navigationFocused && !showControlCenter && !showSocialPanel && listTarget == null) { withFrameNanos { }; if(focus(restoreCard)) restored = true }
+                                             }
+                                             LaunchedEffect(pendingTarget) {
+                                                 if(pendingTarget) { withFrameNanos { }; focus(pendingCard); pendingFocus = null }
+@@ -280,7 +338,7 @@
+                                             Box(modifier.onFocusChanged { change ->
+                                                 focused = change.isFocused
+                                                 if(focused) {
+-                                                    selectedKey = item.key; selectedRow = row.key
++                                                    bookmarks["$scope/item"] = item.key; bookmarks["$scope/row"] = row.key
+                                                     if(focusNavigation.enterRow(row.key)) {
+                                                         verticalScrollJob?.cancel()
+                                                         verticalScrollJob = coroutine.launch { vertical.scrollToItem(rowIndex) }
+@@ -318,19 +376,19 @@
+                         }
+                     }
+                 }
++                }
+             }
+         }
+         if(navigationFocused) CinemaNavigationRail(tab, true, navButtons, {}, ::enterContent) { destination ->
+             when(destination) {
+                 CinemaDestination.SEARCH -> onSearch()
+-                CinemaDestination.LIBRARY -> onLibrary()
+                 CinemaDestination.SETTINGS -> { showControlCenter = true }
+                 else -> {
+                     val newTab = destination.tab ?: return@CinemaNavigationRail
+                     if(newTab == tab) enterContent()
+                     else {
+-                        navigationFocused = false; tab = newTab; selectedKey = null; selectedRow = null; pendingFocus = null; restored = false
+-                        coroutine.launch { vertical.scrollToItem(0) }
++                        verticalScrollJob?.cancel()
++                        navigationFocused = false; tab = newTab
+                     }
+                 }
+             }
+@@ -346,7 +404,7 @@
+         listTarget?.let { title ->
+             CinemaListsDialog(title, library, libraryBusy, libraryMessage, series,
+                 onAction = { onLibraryAction(title, it) }, onSeriesMode = { onSeriesMode(title, it) },
+-                onDismiss = { listTarget = null; focus(listsButton) })
++                onDismiss = { listTarget = null; if(!focus(listsButton)) focus(playButton) })
+         }
+     }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaListsDialog.kt
+@@ -10,6 +10,9 @@
+ import androidx.compose.ui.focus.FocusRequester
+ import androidx.compose.ui.focus.focusRequester
+ import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.platform.LocalInputModeManager
++import androidx.compose.ui.platform.LocalWindowInfo
++import androidx.compose.ui.input.InputMode
+ import androidx.compose.ui.text.style.TextOverflow
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+@@ -35,24 +38,31 @@
+     val saved = library.items.any { personalLibraryKey(it.id, it.type) == key }
+     val position = library.queueKeys.indexOf(key)
+     val first = remember { FocusRequester() }
++    val mover = remember { FocusRequester() }
++    var showMover by remember { mutableStateOf(false) }
++    var returnToMover by remember { mutableStateOf(false) }
++    LaunchedEffect(position) { if(position < 0) showMover = false }
+     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+-        LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
++        val input = LocalInputModeManager.current
++        val window = LocalWindowInfo.current
++        LaunchedEffect(window.isWindowFocused, showMover) {
++            if(window.isWindowFocused && !showMover) { input.requestInputMode(InputMode.Keyboard); withFrameNanos { }; runCatching { if(returnToMover && position >= 0) mover.requestFocus() else first.requestFocus() } }
++        }
+         Column(Modifier.width(420.dp).heightIn(max = 460.dp).background(CinemaStyle.Surface, RoundedCornerShape(20.dp)).verticalScroll(rememberScrollState()).padding(26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+             Text(title.name, fontFamily = CinemaUi, fontSize = 27.sp, color = CinemaStyle.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+             Text(if(position >= 0) "${position + 1}º em Próximos da fila" else if(saved) "Salvo em Quero ver" else "Suas listas, na sua ordem", fontFamily = CinemaUi, fontSize = 13.sp, color = CinemaStyle.Muted)
+             CinemaAction(if(saved) "Tirar de Quero ver" else "Salvar em Quero ver", false,
+-                Modifier.fillMaxWidth().height(40.dp).focusRequester(first), enabled = library.ready) {
++                Modifier.fillMaxWidth().height(40.dp).focusRequester(first), enabled = library.ready && !busy) {
+                 onAction(if(saved) PersonalLibraryAction.REMOVE else PersonalLibraryAction.SAVE)
+             }
+             if(title.type == "movie") {
+                 CinemaAction(if(position >= 0) "Tirar de Próximos da fila" else "Adicionar a Próximos da fila", false,
+-                    Modifier.fillMaxWidth().height(40.dp), enabled = library.ready) {
++                    Modifier.fillMaxWidth().height(40.dp), enabled = library.ready && !busy) {
+                     onAction(if(position >= 0) PersonalLibraryAction.DEQUEUE else PersonalLibraryAction.ENQUEUE)
+                 }
+                 if(position >= 0) {
+-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+-                        CinemaAction("Adiantar", false, Modifier.weight(1f).height(40.dp), enabled = position > 0) { onAction(PersonalLibraryAction.EARLIER) }
+-                        CinemaAction("Adiar", false, Modifier.weight(1f).height(40.dp), enabled = position < library.queueKeys.lastIndex) { onAction(PersonalLibraryAction.LATER) }
++                    CinemaAction("Mover na fila · ${position + 1}º de ${library.queueKeys.size}", false, Modifier.fillMaxWidth().focusRequester(mover), enabled = !busy) {
++                        returnToMover = true; showMover = true
+                     }
+                     Text("Tirar da fila mantém o filme em Quero ver.", fontFamily = CinemaUi, fontSize = 11.sp, color = CinemaStyle.Muted)
+                 }
+@@ -64,15 +74,18 @@
+                     Text(personalSeriesLabel(it), fontFamily = CinemaUi, fontSize = 13.sp, color = CinemaStyle.Muted)
+                 }
+                 CinemaAction(when(mode) { PersonalSeriesMode.FOLLOWING -> "Pausar acompanhamento"; PersonalSeriesMode.PAUSED -> "Retomar acompanhamento"; else -> "Acompanhar série" },
+-                    false, Modifier.fillMaxWidth().height(40.dp), enabled = series.snapshot.ready) {
++                    false, Modifier.fillMaxWidth().height(40.dp), enabled = series.snapshot.ready && !busy) {
+                     onSeriesMode(if(mode == PersonalSeriesMode.FOLLOWING) PersonalSeriesMode.PAUSED else PersonalSeriesMode.FOLLOWING)
+                 }
+                 if(mode == PersonalSeriesMode.FOLLOWING || mode == PersonalSeriesMode.PAUSED) {
+-                    CinemaAction("Deixar de acompanhar", false, Modifier.fillMaxWidth().height(40.dp)) { onSeriesMode(PersonalSeriesMode.STOPPED) }
++                    CinemaAction("Deixar de acompanhar", false, Modifier.fillMaxWidth().height(40.dp), enabled = !busy) { onSeriesMode(PersonalSeriesMode.STOPPED) }
+                 }
+             }
+             Text(if(busy) "Salvando…" else message ?: series.message ?: "Listas locais neste piloto.", fontFamily = CinemaUi, fontSize = 11.sp, color = CinemaStyle.Muted)
+             CinemaAction("Concluir", true, Modifier.fillMaxWidth().height(40.dp), onClick = onDismiss)
+         }
++        if(showMover && position >= 0) CinemaQueuePositionDialog(title, library, position,
++            onConfirm = { onAction(PersonalLibraryAction.MoveTo(it)); showMover = false },
++            onDismiss = { showMover = false })
+     }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt
+@@ -53,9 +53,30 @@
+     genres = genres, runtime = runtime, addon = addon, metadata = this
+ )
+ 
+-internal fun cinemaRows(state: HomeUiState, tab: Int, library: PersonalLibraryState = PersonalLibraryState(), series: PersonalSeriesUiState = PersonalSeriesUiState()): List<CinemaRow> {
++internal fun cinemaRows(state: HomeUiState, tab: Int, library: PersonalLibraryState = PersonalLibraryState(), series: PersonalSeriesUiState = PersonalSeriesUiState(), section: CinemaBrowseSection = CinemaBrowseSection.PERSONAL): List<CinemaRow> {
+     val type = when(tab) { 1 -> "movie"; 2 -> "series"; else -> null }
+     val metadata = state.catalogRows.flatMap { it.items }.associateBy { "${it.apiType}:${it.id}" }
++    val catalogs = state.catalogRows.mapNotNull { row ->
++        val items = row.items.filter { type == null || it.apiType == type }.distinctBy { "${it.apiType}:${it.id}" }
++            .map { it.asCinemaTitle(row.addonBaseUrl) }
++        items.takeIf { it.isNotEmpty() }?.let { CinemaRow(row.stableKey(), row.catalogName, it, row) }
++    }
++    if (section == CinemaBrowseSection.DISCOVER) return catalogs
++    if (section == CinemaBrowseSection.HISTORY && tab == 1) {
++        val watched = library.history.filter { it.contentType == "movie" && it.season == null && it.episode == null }
++            .sortedByDescending { it.watchedAt }.distinctBy { it.contentId }
++        val titles = watched.map { item ->
++            val meta = metadata["movie:${item.contentId}"]
++            val source = state.catalogRows.firstOrNull { row -> row.items.any { it.apiType == "movie" && it.id == item.contentId } }?.addonBaseUrl.orEmpty()
++            (meta?.asCinemaTitle(source) ?: CinemaTitle("movie:${item.contentId}", item.contentId, "movie", item.title, item.poster, null, year = item.releaseInfo))
++                .copy(poster = item.poster ?: meta?.poster, statusLabel = "Visto em " + java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale("pt", "BR")).format(java.util.Date(item.watchedAt)))
++        }
++        return if (titles.isEmpty()) emptyList() else listOf(CinemaRow("personal-movie-history", "Filmes assistidos", titles))
++    }
++    if (section == CinemaBrowseSection.SAVED && tab == 2) {
++        val savedSeries = library.items.filter { it.type == "series" }.sortedByDescending { it.addedAt }
++        return if (savedSeries.isEmpty()) emptyList() else listOf(CinemaRow("personal-series-saved", "Séries para ver", savedSeries.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) }))
++    }
+     val rows = mutableListOf<CinemaRow>()
+     val modes = series.snapshot.entries.associate { it.item.id to it.mode }
+     val resume = state.continueWatchingItems.filter { item ->
+@@ -96,34 +117,26 @@
+         val pending = series.summaries.filter { it.status == PersonalSeriesStatus.PENDING && it.entry.item.id !in inProgress }
+         if(pending.isNotEmpty()) rows += CinemaRow("personal-series-pending", "Episódios pendentes", pending.map(::personalSeriesTitle))
+         if(tab == 2) {
+-            val following = series.summaries.filter { it.entry.mode == PersonalSeriesMode.FOLLOWING && it.status != PersonalSeriesStatus.PENDING }
+-            val paused = series.summaries.filter { it.entry.mode == PersonalSeriesMode.PAUSED }
+-            if(following.isNotEmpty()) rows += CinemaRow("personal-series-following", "Acompanhando", following.map(::personalSeriesTitle))
+-            if(paused.isNotEmpty()) rows += CinemaRow("personal-series-paused", "Pausadas", paused.map(::personalSeriesTitle))
++            listOf(
++                PersonalSeriesStatus.UP_TO_DATE to "Em dia",
++                PersonalSeriesStatus.WAITING_PREMIERE to "Estreias acompanhadas",
++                PersonalSeriesStatus.UNKNOWN to "Episódios a confirmar",
++                PersonalSeriesStatus.PAUSED to "Pausadas",
++                PersonalSeriesStatus.ENDED to "Concluídas"
++            ).forEach { (status, label) ->
++                val items = series.summaries.filter { it.status == status }
++                if(items.isNotEmpty()) rows += CinemaRow("personal-series-${status.name}", label, items.map(::personalSeriesTitle))
++            }
+         }
+     }
++
+     if(tab != 2 && library.queuedMovies.isNotEmpty()) {
+-        rows += CinemaRow("personal-queue", "Próximos da fila", library.queuedMovies.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
++        rows += CinemaRow("personal-queue", "Próximos da fila", library.queuedMovies.filterNot { saved -> resume.any { it.type == "movie" && it.id == saved.id } }.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
+     }
+-    val saved = library.items.filter { type == null || it.type == type }.sortedByDescending { it.addedAt }
+-    if(saved.isNotEmpty()) {
+-        rows += CinemaRow("personal-watchlist-$tab", if(tab == 2) "Séries para ver" else "Quero ver",
+-            saved.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
++    if (tab != 2) {
++        val alreadyShown = rows.flatMap { it.titles }.mapTo(hashSetOf()) { it.key }
++        val saved = library.items.filter { it.type == "movie" && "movie:${it.id}" !in alreadyShown }.sortedByDescending { it.addedAt }
++        if(saved.isNotEmpty()) rows += CinemaRow("personal-watchlist-$tab", "Quero ver", saved.map { it.toMetaPreview().asCinemaTitle(it.addonBaseUrl.orEmpty()) })
+     }
+-    state.catalogRows.forEach { row ->
+-        val items = row.items.filter { type == null || it.apiType == type }
+-            .distinctBy { "${it.apiType}:${it.id}" }.map { it.asCinemaTitle(row.addonBaseUrl) }
+-        if(items.isNotEmpty()) {
+-            val name = if(tab == 0) {
+-                val kind = items.map { it.type }.distinct().singleOrNull()
+-                when(kind) {
+-                    "movie" -> "${row.catalogName} · Filmes"
+-                    "series" -> "${row.catalogName} · Séries"
+-                    else -> row.catalogName
+-                }
+-            } else row.catalogName
+-            rows += CinemaRow(row.stableKey(), name, items, row)
+-        }
+-    }
+-    return rows
++    return rows.filter { it.titles.isNotEmpty() }
+ }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/CinemaNavigationRail.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaNavigationRail.kt
+@@ -30,11 +30,10 @@
+ 
+ internal enum class CinemaDestination(val label: String, val icon: ImageVector, val tab: Int? = null) {
+     HOME("Início", CinemaIcons.Home, 0),
+-    SEARCH("Busca", CinemaIcons.Search),
+     MOVIES("Filmes", CinemaIcons.Film, 1),
+     SERIES("Séries", CinemaIcons.Series, 2),
+-    LIBRARY("Minha biblioteca", CinemaIcons.Bookmark),
+     AGENDA("Agenda", CinemaIcons.Calendar, 3),
++    SEARCH("Busca", CinemaIcons.Search),
+     SETTINGS("Ajustes", CinemaIcons.Settings)
+ }
+ 
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/CinemaQueuePositionDialog.kt
+@@ -0,0 +1,87 @@
++package com.nuvio.tv.ui.personal
++
++import androidx.compose.foundation.background
++import androidx.compose.foundation.border
++import androidx.compose.foundation.focusable
++import androidx.compose.foundation.layout.*
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.runtime.*
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.focus.FocusRequester
++import androidx.compose.ui.focus.focusRequester
++import androidx.compose.ui.focus.focusProperties
++import androidx.compose.ui.focus.onFocusChanged
++import androidx.compose.ui.input.InputMode
++import androidx.compose.ui.input.key.*
++import androidx.compose.ui.platform.LocalInputModeManager
++import androidx.compose.ui.platform.LocalWindowInfo
++import androidx.compose.ui.platform.testTag
++import androidx.compose.ui.semantics.*
++import androidx.compose.ui.text.style.TextOverflow
++import androidx.compose.ui.unit.dp
++import androidx.compose.ui.unit.sp
++import androidx.compose.ui.window.Dialog
++import androidx.compose.ui.window.DialogProperties
++import androidx.tv.material3.Text
++import com.nuvio.tv.domain.model.PersonalLibraryState
++import com.nuvio.tv.domain.model.movePersonalQueueTo
++
++/** Preview locally; only Confirm writes the new priority. Back/Cancel preserve the queue. */
++@Composable
++internal fun CinemaQueuePositionDialog(title: CinemaTitle, library: PersonalLibraryState, position: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
++    var target by remember(title.key) { mutableIntStateOf(position) }
++    val last = library.queueKeys.lastIndex.coerceAtLeast(0)
++    val first = remember { FocusRequester() }
++    val firstAction = remember { FocusRequester() }
++    val lastAction = remember { FocusRequester() }
++    val saveAction = remember { FocusRequester() }
++    val cancelAction = remember { FocusRequester() }
++    LaunchedEffect(last) { target = target.coerceIn(0, last) }
++    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
++        val input = LocalInputModeManager.current
++        val window = LocalWindowInfo.current
++        LaunchedEffect(window.isWindowFocused) {
++            if(window.isWindowFocused) { input.requestInputMode(InputMode.Keyboard); withFrameNanos { }; first.requestFocus() }
++        }
++        Column(Modifier.width(460.dp).background(CinemaStyle.Surface, RoundedCornerShape(20.dp)).padding(28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
++            Text("Mover na fila", fontFamily = CinemaDisplay, fontSize = 28.sp, color = CinemaStyle.Ink)
++            Text(title.name, fontFamily = CinemaUi, fontSize = 15.sp, color = CinemaStyle.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
++            var focused by remember { mutableStateOf(false) }
++            Text("Posição ${target + 1} de ${last + 1}", fontFamily = CinemaDisplay, fontSize = 26.sp, color = CinemaStyle.Green,
++                modifier = Modifier.fillMaxWidth().testTag("queue-position").focusRequester(first)
++                    .focusProperties { down = firstAction; up = FocusRequester.Cancel }
++                    .onFocusChanged { focused = it.isFocused }
++                    .onPreviewKeyEvent { event ->
++                        if(event.type != KeyEventType.KeyDown) false else when(event.key) {
++                            Key.DirectionLeft -> { target = (target - 1).coerceAtLeast(0); true }
++                            Key.DirectionRight -> { target = (target + 1).coerceAtMost(last); true }
++                            else -> false
++                        }
++                    }.semantics {
++                        stateDescription = "Posição ${target + 1} de ${last + 1}"
++                        progressBarRangeInfo = ProgressBarRangeInfo(target.toFloat(), 0f..last.toFloat(), (last - 1).coerceAtLeast(0))
++                        setProgress { value -> target = value.toInt().coerceIn(0, last); true }
++                    }.focusable().border(if(focused) 2.dp else 1.dp, if(focused) CinemaStyle.Green else CinemaStyle.Outline, RoundedCornerShape(12.dp)).padding(16.dp))
++            val reordered = movePersonalQueueTo(library.queueKeys, title.key, target)
++            val nextName = reordered.getOrNull(target + 1)?.let { key -> library.items.firstOrNull { "${it.type}:${it.id}" == key }?.name }
++            Text(if(nextName != null) "Antes de $nextName" else "Último da fila", fontFamily = CinemaUi, fontSize = 13.sp, color = CinemaStyle.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
++            Text("Use ← → para escolher. A ordem muda somente ao salvar.", fontFamily = CinemaUi, fontSize = 12.sp, color = CinemaStyle.Muted)
++            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++                CinemaAction("Primeiro", false, Modifier.focusRequester(firstAction).focusProperties {
++                    up = first; down = saveAction; right = lastAction; left = FocusRequester.Cancel
++                }) { target = 0 }
++                CinemaAction("Último", false, Modifier.focusRequester(lastAction).focusProperties {
++                    up = first; down = cancelAction; left = firstAction; right = FocusRequester.Cancel
++                }) { target = last }
++            }
++            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++                CinemaAction("Salvar posição", true, Modifier.testTag("queue-position-save").focusRequester(saveAction).focusProperties {
++                    up = firstAction; right = cancelAction; left = FocusRequester.Cancel; down = FocusRequester.Cancel
++                }) { onConfirm(target) }
++                CinemaAction("Cancelar", false, Modifier.focusRequester(cancelAction).focusProperties {
++                    up = lastAction; left = saveAction; right = FocusRequester.Cancel; down = FocusRequester.Cancel
++                }, onClick = onDismiss)
++            }
++        }
++    }
++}
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt
+@@ -5,6 +5,9 @@
+ import androidx.lifecycle.viewModelScope
+ import com.google.gson.Gson
+ import com.nuvio.tv.core.profile.ProfileManager
++import com.nuvio.tv.data.local.WatchedItemsPreferences
++import com.nuvio.tv.domain.model.PosterShape
++import com.nuvio.tv.domain.model.summarizePersonalSeries
+ import com.nuvio.tv.data.local.LibraryPreferences
+ import com.nuvio.tv.data.local.PersonalSeriesPreferences
+ import com.nuvio.tv.data.local.PlayerSettingsDataStore
+@@ -34,7 +37,8 @@
+     private val series: PersonalSeriesPreferences,
+     private val profiles: ProfileManager,
+     private val player: PlayerSettingsDataStore,
+-    private val catalogs: CatalogRepository
++    private val catalogs: CatalogRepository,
++    private val watched: WatchedItemsPreferences
+ ) : ViewModel() {
+     private val updater = PersonalUpdater(context, client)
+     private val _state = MutableStateFlow(ControlState())
+@@ -82,7 +86,18 @@
+         val candidate = PersonalPhoneServer(context, state = {
+             runBlocking(Dispatchers.IO) { withTimeout(5_000) {
+                 check(profiles.activeProfileId.value == profile) { "O perfil mudou. Reabra o QR Code." }
+-                gson.toJson(mapOf("library" to library.observePersonalLibrary(profile).first(), "series" to series.observe(profile).first(), "searchResults" to phoneResults.map { mapOf("id" to it.id, "type" to it.apiType, "name" to it.name, "poster" to it.poster) }, "availableMB" to PersonalStorage.availableBytes(context) / (1024 * 1024), "version" to com.nuvio.tv.BuildConfig.VERSION_NAME))
++                val history = watched.observeAllItems(profile).first()
++                val following = series.observe(profile).first()
++                val summaries = following.entries.map { entry ->
++                    val summary = summarizePersonalSeries(entry, history, java.time.Instant.now(), java.time.ZoneId.systemDefault())
++                    mapOf("item" to entry.item, "mode" to entry.mode.name, "status" to summary.status.name, "label" to personalSeriesLabel(summary), "pendingCount" to summary.pending.size)
++                }
++                val movies = history.filter { it.contentType == "movie" && it.season == null && it.episode == null }
++                    .sortedByDescending { it.watchedAt }.distinctBy { it.contentId }
++                    .map { mapOf("id" to it.contentId, "type" to "movie", "name" to it.title, "poster" to it.poster, "watchedAt" to it.watchedAt) }
++                gson.toJson(mapOf("library" to library.observePersonalLibrary(profile).first(), "series" to mapOf("entries" to summaries, "ready" to following.ready), "history" to movies,
++                    "searchResults" to phoneResults.map { mapOf("id" to it.id, "type" to it.apiType, "name" to it.name, "poster" to it.poster) },
++                    "availableMB" to PersonalStorage.availableBytes(context) / (1024 * 1024), "version" to com.nuvio.tv.BuildConfig.VERSION_NAME))
+             } }
+         }, action = { data ->
+             runBlocking(Dispatchers.IO) { withTimeout(8_000) {
+@@ -110,6 +125,11 @@
+                             else -> library.addItem(item, profile)
+                         }
+                     }
++                    "saveWatched" -> {
++                        val item = watched.observeAllItems(profile).first().filter { it.contentType == "movie" && it.season == null && it.episode == null }
++                            .first { it.contentId == data.getString("id") }
++                        library.addItem(SavedLibraryItem(item.contentId, "movie", item.title, item.poster, PosterShape.POSTER, null, null, item.releaseInfo, null, emptyList(), null), profile)
++                    }
+                     "feed" -> updater.setFeed(data.getString("url"))
+                     "playbackDefaults" -> { player.setPreferredAudioLanguage(AudioLanguageOption.ORIGINAL); player.setSubtitlePreferredLanguage("pt-br") }
+                     "series" -> {
+@@ -119,10 +139,17 @@
+                     else -> {
+                         val item = library.getAllItems(profile).first { it.id == data.getString("id") && it.type == data.getString("type") }
+                         when(op) {
++                            "followSaved" -> { require(item.type == "series"); series.setMode(item, PersonalSeriesMode.FOLLOWING, profile) }
+                             "enqueue" -> library.setPersonalQueueMembership(item, true, profile)
+                             "dequeue" -> library.setPersonalQueueMembership(item, false, profile)
+                             "earlier" -> library.movePersonalMovie(item.id, -1, profile)
+                             "later" -> library.movePersonalMovie(item.id, 1, profile)
++                            "move" -> {
++                                require(item.type == "movie")
++                                val position = data.getInt("position")
++                                require(position >= 0) { "Escolha uma posição válida." }
++                                library.movePersonalMovieTo(item.id, position, profile)
++                            }
+                             "remove" -> library.removeItem(item.id, item.type, profile)
+                             else -> error("Ação desconhecida.")
+                         }
+--- a/app/src/main/java/com/nuvio/tv/ui/personal/PersonalLibraryViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/personal/PersonalLibraryViewModel.kt
+@@ -16,7 +16,15 @@
+ import kotlinx.coroutines.flow.*
+ import kotlinx.coroutines.launch
+ 
+-internal enum class PersonalLibraryAction { SAVE, REMOVE, ENQUEUE, DEQUEUE, EARLIER, LATER }
++internal sealed interface PersonalLibraryAction {
++    data object SAVE : PersonalLibraryAction
++    data object REMOVE : PersonalLibraryAction
++    data object ENQUEUE : PersonalLibraryAction
++    data object DEQUEUE : PersonalLibraryAction
++    data object EARLIER : PersonalLibraryAction
++    data object LATER : PersonalLibraryAction
++    data class MoveTo(val position: Int) : PersonalLibraryAction
++}
+ 
+ @HiltViewModel
+ @OptIn(ExperimentalCoroutinesApi::class)
+@@ -39,7 +47,7 @@
+                 combine(library.observePersonalLibrary(profileId), watched.observeAllItems(profileId)) { saved, history -> saved to history }
+             }.catch { _message.value = "Não foi possível carregar suas listas. Reabra o aplicativo para tentar novamente." }
+             .collect { (saved, history) ->
+-                _state.value = saved
++                _state.value = saved.copy(history = history)
+                 if (newlyCompletedSavedMovies(saved.items, history).isNotEmpty()) {
+                     try {
+                         library.removePersonalCompletedMovies(history, saved.profileId)
+@@ -66,6 +74,7 @@
+                     PersonalLibraryAction.DEQUEUE -> library.setPersonalQueueMembership(saved, false, profileId)
+                     PersonalLibraryAction.EARLIER -> library.movePersonalMovie(title.id, -1, profileId)
+                     PersonalLibraryAction.LATER -> library.movePersonalMovie(title.id, 1, profileId)
++                    is PersonalLibraryAction.MoveTo -> library.movePersonalMovieTo(title.id, action.position, profileId)
+                 }
+                 _message.value = null
+             } catch (error: CancellationException) { throw error }
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaBrowseExperienceTest.kt
+@@ -0,0 +1,76 @@
++package com.nuvio.tv.ui.personal
++
++import com.nuvio.tv.domain.model.*
++import com.nuvio.tv.ui.screens.home.*
++import org.junit.Assert.*
++import org.junit.Test
++
++class CinemaBrowseExperienceTest {
++    private fun saved(id: String, type: String = "movie", at: Long = 1) = SavedLibraryItem(
++        id, type, "Title $id", "poster-$id", PosterShape.POSTER, "scene-$id", "Synopsis", "2026", 8f,
++        listOf("Drama"), "https://catalog.example", addedAt = at
++    )
++    private fun catalog(type: ContentType, id: String) = CatalogRow("fixture", "Fixture", "https://catalog.example", id, id, type,
++        items = listOf(saved(id, type.toApiString()).toMetaPreview()), hasMore = false)
++    private fun progress(id: String, type: String = "movie") = ContinueWatchingItem.InProgress(WatchProgress(
++        contentId = id, contentType = type, name = id, poster = "poster-$id", backdrop = null, logo = null,
++        videoId = id, season = if(type == "series") 1 else null, episode = if(type == "series") 1 else null,
++        episodeTitle = null, position = 60_000, duration = 120_000, lastWatched = 1
++    ))
++
++    @Test fun `discovery is type scoped and never replaces or duplicates personal home`() {
++        val state = HomeUiState(catalogRows = listOf(catalog(ContentType.MOVIE, "trending-film"), catalog(ContentType.SERIES, "trending-series")))
++        val library = PersonalLibraryState(items = listOf(saved("mine")), ready = true)
++        assertEquals(listOf("mine"), cinemaRows(state, 0, library).flatMap { it.titles }.map { it.id })
++        assertTrue(cinemaRows(state, 0).isEmpty())
++        assertEquals(listOf("trending-film"), cinemaRows(state, 1, library, section = CinemaBrowseSection.DISCOVER).flatMap { it.titles }.map { it.id })
++        assertEquals(listOf("trending-series"), cinemaRows(state, 2, library, section = CinemaBrowseSection.DISCOVER).flatMap { it.titles }.map { it.id })
++    }
++
++    @Test fun `resume queue and remaining watchlist do not repeat a movie or mutate priorities`() {
++        val library = PersonalLibraryState(items = listOf(saved("a"), saved("b"), saved("c", at = 2), saved("d", at = 3)), queueKeys = listOf("movie:a", "movie:b"), ready = true)
++        val rows = cinemaRows(HomeUiState(continueWatchingItems = listOf(progress("a"))), 1, library)
++        assertEquals(listOf("a"), rows[0].titles.map { it.id })
++        assertEquals(listOf("b"), rows[1].titles.map { it.id })
++        assertEquals(listOf("d", "c"), rows[2].titles.map { it.id })
++        assertEquals(listOf("movie:a", "movie:b"), library.queueKeys)
++    }
++
++    @Test fun `history keeps latest movie completion and allows a separate rewatch intention`() {
++        val library = PersonalLibraryState(items = listOf(saved("a", at = 30)), history = listOf(
++            WatchedItem("a", "movie", "Old", watchedAt = 10),
++            WatchedItem("b", "movie", "Other", watchedAt = 15),
++            WatchedItem("a", "movie", "Latest", watchedAt = 20),
++            WatchedItem("show", "series", "Show", season = 1, episode = 1, watchedAt = 40),
++            WatchedItem("invalid", "movie", "Episode", season = 1, episode = 1, watchedAt = 40)
++        ))
++        val titles = cinemaRows(HomeUiState(), 1, library, section = CinemaBrowseSection.HISTORY).single().titles
++        assertEquals(listOf("a", "b"), titles.map { it.id })
++        assertEquals("Latest", titles.first().name)
++        assertNull(titles.first().poster)
++        assertTrue(titles.all { it.resume == null && it.statusLabel!!.startsWith("Visto em ") })
++        assertEquals(listOf("a"), cinemaRows(HomeUiState(), 1, library).single().titles.map { it.id })
++    }
++
++    @Test fun `following states have their own shelves and pending episodes do not duplicate resume`() {
++        val statuses = listOf(PersonalSeriesStatus.PENDING, PersonalSeriesStatus.UP_TO_DATE, PersonalSeriesStatus.PAUSED, PersonalSeriesStatus.ENDED, PersonalSeriesStatus.STOPPED)
++        val summaries = statuses.map { status ->
++            val entry = PersonalSeriesEntry(saved(status.name, "series"), when(status) { PersonalSeriesStatus.PAUSED -> PersonalSeriesMode.PAUSED; PersonalSeriesStatus.STOPPED -> PersonalSeriesMode.STOPPED; else -> PersonalSeriesMode.FOLLOWING }, followedAt = 1)
++            PersonalSeriesSummary(entry, status, pending = if(status == PersonalSeriesStatus.PENDING) listOf(PersonalEpisode("ep", 1, 1, "Pilot", "2026-01-01")) else emptyList())
++        }
++        val series = PersonalSeriesUiState(PersonalSeriesSnapshot(entries = summaries.map { it.entry }, ready = true), summaries)
++        val state = HomeUiState(continueWatchingItems = listOf(progress("PENDING", "series"), progress("PAUSED", "series")))
++        val rows = cinemaRows(state, 2, series = series)
++        assertEquals(listOf("Continuar assistindo", "Em dia", "Pausadas", "Concluídas"), rows.map { it.name })
++        assertEquals(listOf("PENDING", "UP_TO_DATE", "PAUSED", "ENDED"), rows.flatMap { it.titles }.map { it.id })
++        assertEquals(listOf("PENDING"), cinemaRows(state, 0, series = series).flatMap { it.titles }.map { it.id })
++    }
++
++    @Test fun `saved series remain separate from following and films`() {
++        val library = PersonalLibraryState(items = listOf(saved("film"), saved("show", "series")))
++        assertEquals(listOf("show"), cinemaRows(HomeUiState(), 2, library, section = CinemaBrowseSection.SAVED).single().titles.map { it.id })
++        assertTrue(cinemaRows(HomeUiState(), 2, library).isEmpty())
++        assertEquals("Descobrir séries", cinemaEmptyState(2, CinemaBrowseSection.PERSONAL, false, true).action)
++        assertEquals("Gerenciar add-ons", cinemaEmptyState(1, CinemaBrowseSection.DISCOVER, false, false).action)
++    }
++}
+--- a/app/src/test/java/com/nuvio/tv/ui/personal/CinemaHomeNavigationUiTest.kt
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaHomeNavigationUiTest.kt
+@@ -25,6 +25,7 @@
+ import com.nuvio.tv.domain.model.ContentType
+ import com.nuvio.tv.domain.model.MetaPreview
+ import com.nuvio.tv.domain.model.PersonalLibraryState
++import com.nuvio.tv.domain.model.PersonalSeriesSnapshot
+ import com.nuvio.tv.domain.model.PosterShape
+ import com.nuvio.tv.ui.screens.home.HomeUiState
+ import com.nuvio.tv.ui.theme.NuvioTheme
+@@ -80,7 +81,7 @@
+                 CinemaHomeScreen(
+                     state = HomeUiState(catalogRows = rows, isLoading = false), library = PersonalLibraryState(ready = true),
+                     libraryBusy = false, libraryMessage = null, onLibraryAction = { _, _ -> },
+-                    series = PersonalSeriesUiState(), onSeriesMode = { _, _ -> }, onRefreshSeries = {},
++                    series = PersonalSeriesUiState(PersonalSeriesSnapshot(ready = true)), onSeriesMode = { _, _ -> }, onRefreshSeries = {},
+                     onDetail = { _, _, _ -> }, onResume = {}, onFocusMetadata = {}, onLoadMore = {},
+                     onSearch = {}, onLibrary = {}, onSettings = {}, onAddons = {}, onRetry = {}
+                 )
+@@ -89,6 +90,8 @@
+         compose.waitForIdle()
+         compose.mainClock.advanceTimeBy(300)
+         compose.waitForIdle()
++        compose.onNodeWithTag("empty-primary").assertIsFocused()
++        press(Key.Enter)
+         compose.onNodeWithTag("poster-0-0").assertIsFocused()
+     }
+     private fun press(key: Key) { compose.onRoot().performKeyInput { pressKey(key) }; compose.waitForIdle() }
+@@ -105,8 +108,8 @@
+     }
+     @Test fun horizontal_navigation_keeps_shelf_and_hero_stable_and_rail_restores_focus() {
+         openScreen()
+-        compose.onNodeWithTag("nav-HOME").assertDoesNotExist()
+-        screenshot("inicio-interestelar")
++        compose.onNodeWithTag("nav-MOVIES").assertDoesNotExist()
++        screenshot("experience-filmes-descobrir")
+         val shelf = compose.onNodeWithTag("row-heading-0").fetchSemanticsNode().boundsInRoot
+         val firstLeft = compose.onNodeWithTag("poster-0-0").fetchSemanticsNode().boundsInRoot.left
+         repeat(10) { press(Key.DirectionRight) }
+@@ -115,12 +118,12 @@
+         press(Key.DirectionUp)
+         compose.onNodeWithTag("hero-play").assertIsFocused()
+         press(Key.DirectionLeft)
+-        compose.onNodeWithTag("nav-HOME").assertIsFocused()
++        compose.onNodeWithTag("nav-MOVIES").assertIsFocused()
+         assertEquals(shelf.left, compose.onNodeWithTag("row-heading-0").fetchSemanticsNode().boundsInRoot.left, .5f)
+         assertEquals(shelf.top, compose.onNodeWithTag("row-heading-0").fetchSemanticsNode().boundsInRoot.top, .5f)
+-        screenshot("menu-titulo-longo")
++        screenshot("experience-menu-titulo-longo")
+         press(Key.DirectionRight)
+-        compose.onNodeWithTag("nav-HOME").assertDoesNotExist()
++        compose.onNodeWithTag("nav-MOVIES").assertDoesNotExist()
+         compose.onNodeWithTag("poster-0-10").assertIsFocused()
+         repeat(10) { press(Key.DirectionLeft) }
+         compose.onNodeWithTag("poster-0-0").assertIsFocused()
+@@ -129,9 +132,9 @@
+         compose.mainClock.advanceTimeBy(600)
+         compose.waitForIdle()
+         assertEquals(firstLeft, compose.onNodeWithTag("poster-0-0").fetchSemanticsNode().boundsInRoot.left, .5f)
+-        screenshot("inicio-interestelar")
++        screenshot("experience-filmes-descobrir")
+         press(Key.DirectionLeft)
+-        screenshot("menu-expandido")
++        screenshot("experience-menu-expandido")
+         press(Key.DirectionRight)
+         compose.onNodeWithTag("poster-0-0").assertIsFocused()
+     }
+@@ -147,4 +150,40 @@
+         press(Key.DirectionUp)
+         compose.onNodeWithTag("poster-0-4").assertIsFocused()
+     }
++
++    @Test fun sections_and_main_destinations_restore_their_own_selected_poster() {
++        openScreen()
++        repeat(10) { press(Key.DirectionRight) }
++        press(Key.DirectionUp)
++        press(Key.DirectionUp)
++        compose.onNodeWithTag("section-DISCOVER").assertIsFocused()
++        press(Key.DirectionLeft)
++        press(Key.Enter)
++        compose.onNodeWithTag("empty-primary").assertIsFocused()
++        compose.onNodeWithText("O que você quer ver?").assertExists()
++        screenshot("experience-filmes-quero-ver-vazio")
++        press(Key.DirectionUp)
++        press(Key.DirectionRight)
++        press(Key.Enter)
++        compose.onNodeWithTag("poster-0-10").assertIsFocused()
++        press(Key.DirectionUp)
++        press(Key.DirectionLeft)
++        press(Key.DirectionDown)
++        press(Key.Enter)
++        compose.onNodeWithTag("empty-primary").assertIsFocused()
++        compose.onNodeWithTag("section-SAVED").assertExists()
++        screenshot("experience-series-secoes")
++        press(Key.DirectionLeft)
++        compose.onNodeWithTag("nav-SERIES").assertIsFocused()
++        press(Key.DirectionUp)
++        press(Key.Enter)
++        compose.onNodeWithTag("poster-0-10").assertIsFocused()
++        press(Key.DirectionUp)
++        press(Key.DirectionUp)
++        press(Key.DirectionRight)
++        press(Key.Enter)
++        compose.onNodeWithTag("empty-primary").assertIsFocused()
++        compose.onNodeWithText("Seu histórico começa aqui").assertExists()
++        screenshot("experience-historico-vazio")
++    }
+ }
+--- a/app/src/test/java/com/nuvio/tv/ui/personal/CinemaModelsTest.kt
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaModelsTest.kt
+@@ -50,7 +50,7 @@
+     @Test fun `duplicated catalog pages do not produce duplicate focus keys`() {
+         val item = meta("film", ContentType.MOVIE)
+         val catalog = CatalogRow("id", "Name", "https://example.com", "popular", "Popular", ContentType.MOVIE, items = listOf(item, item))
+-        val rows = cinemaRows(HomeUiState(catalogRows = listOf(catalog)), 0)
++        val rows = cinemaRows(HomeUiState(catalogRows = listOf(catalog)), 1, section = CinemaBrowseSection.DISCOVER)
+         assertEquals(1, rows.single().titles.size)
+     }
+     @Test fun `calendar includes leap day and correctly aligns Sunday`() {
+--- /dev/null
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/CinemaQueuePositionUiTest.kt
+@@ -0,0 +1,82 @@
++package com.nuvio.tv.ui.personal
++
++import android.app.Application
++import androidx.compose.runtime.*
++import androidx.compose.ui.input.key.Key
++import androidx.compose.ui.test.*
++import androidx.compose.ui.test.junit4.createComposeRule
++import com.nuvio.tv.domain.model.PersonalLibraryState
++import com.nuvio.tv.ui.theme.NuvioTheme
++import org.junit.Assert.*
++import org.junit.Rule
++import org.junit.Test
++import org.junit.runner.RunWith
++import org.robolectric.RobolectricTestRunner
++import org.robolectric.annotation.*
++
++@OptIn(ExperimentalTestApi::class)
++@RunWith(RobolectricTestRunner::class)
++@Config(application = Application::class, sdk = [35], qualifiers = "w960dp-h540dp-land-xhdpi")
++@GraphicsMode(GraphicsMode.Mode.NATIVE)
++@ConscryptMode(ConscryptMode.Mode.OFF)
++class CinemaQueuePositionUiTest {
++    @get:Rule val compose = createComposeRule()
++    private val confirmations = mutableListOf<Int>()
++    private var dismissed = false
++    private fun open() {
++        compose.setContent {
++            NuvioTheme { CinemaQueuePositionDialog(
++                CinemaTitle("movie:b", "b", "movie", "Interestelar", null, null),
++                PersonalLibraryState(queueKeys = listOf("movie:a", "movie:b", "movie:c"), ready = true), 1,
++                onConfirm = { confirmations += it }, onDismiss = { dismissed = true }) }
++        }
++        compose.waitForIdle()
++        compose.runOnIdle {
++            val decor = org.robolectric.shadows.ShadowDialog.getLatestDialog().window!!.decorView
++            val root = org.robolectric.util.ReflectionHelpers.callInstanceMethod<Any>(decor, "getViewRootImpl")
++            org.robolectric.shadow.api.Shadow.extract<org.robolectric.shadows.ShadowViewRootImpl>(root).callWindowFocusChanged(true)
++        }
++        compose.mainClock.advanceTimeBy(100)
++        compose.waitForIdle()
++        compose.onNodeWithTag("queue-position").assertIsFocused()
++        compose.runOnIdle {
++            val view = org.robolectric.shadows.ShadowDialog.getLatestDialog().window!!.decorView
++            val bitmap = android.graphics.Bitmap.createBitmap(view.width, view.height, android.graphics.Bitmap.Config.ARGB_8888)
++            view.draw(android.graphics.Canvas(bitmap))
++            val file = java.io.File("build/reports/cinema/experience-mover-fila.png").apply { parentFile!!.mkdirs() }
++            file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
++            bitmap.recycle()
++        }
++    }
++    private fun press(key: Key) {
++        compose.onAllNodes(isFocused()).onFirst().performKeyInput { pressKey(key) }
++        compose.waitForIdle()
++    }
++    @Test fun remote_position_preview_only_commits_after_save() {
++        open()
++        press(Key.DirectionRight)
++        press(Key.DirectionRight)
++        compose.onNodeWithText("Posição 3 de 3").assertIsDisplayed()
++        assertTrue(confirmations.isEmpty())
++        press(Key.DirectionDown)
++        compose.onNodeWithText("Primeiro").assertIsFocused()
++        press(Key.Enter)
++        compose.onNodeWithText("Posição 1 de 3").assertIsDisplayed()
++        press(Key.DirectionDown)
++        compose.onNodeWithTag("queue-position-save").assertIsFocused()
++        press(Key.Enter)
++        assertEquals(listOf(0), confirmations)
++        assertFalse(dismissed)
++    }
++    @Test fun cancel_discards_preview_without_changing_order() {
++        open()
++        press(Key.DirectionLeft)
++        press(Key.DirectionDown)
++        press(Key.DirectionDown)
++        press(Key.DirectionRight)
++        compose.onNodeWithText("Cancelar").assertIsFocused()
++        press(Key.Enter)
++        assertTrue(dismissed)
++        assertTrue(confirmations.isEmpty())
++    }
++}
+--- a/app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt
++++ b/app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt
+@@ -74,6 +74,20 @@
+         assertEquals(listOf("movie:a", "movie:b", "movie:c"), snapshot().queueKeys)
+     }
+ 
++    @Test fun `absolute queue position persists and missing items cannot replace priorities`() = runBlocking {
++        listOf("a", "b", "c", "d").forEach { preferences.setPersonalQueueMembership(movie(it), true, 1) }
++        preferences.movePersonalMovieTo("d", 1, 1)
++        preferences.movePersonalMovieTo("missing", 0, 1)
++        preferences.movePersonalMovieTo("a", -1, 1)
++        scope.coroutineContext[Job]!!.cancelAndJoin()
++        stores.clear()
++        open()
++        assertEquals(listOf("movie:a", "movie:d", "movie:b", "movie:c"), snapshot().queueKeys)
++        preferences.movePersonalMovieTo("a", 99, 1)
++        assertEquals(listOf("movie:d", "movie:b", "movie:c", "movie:a"), snapshot().queueKeys)
++        assertEquals(setOf("a", "b", "c", "d"), snapshot().items.map { it.id }.toSet())
++    }
++
+     @Test fun `removing saved movie clears queue and readding does not restore old priority`() = runBlocking {
+         preferences.setPersonalQueueMembership(movie("a"), true, 1)
+         preferences.removeItem("a", "movie", 1)
+--- /dev/null
++++ b/docs/EXPERIENCE.md
+@@ -0,0 +1,54 @@
++# Cinema TV — organização e continuidade
++
++29/10/2026. Iteração de experiência sobre o código da versão 0.4.1. Ainda não é uma nova versão distribuída em APK. A prioridade atual é fechar sistema, opções e fluxos; o refinamento visual vem depois.
++
++## O que muda
++
++Antes, o Início misturava listas pessoais com catálogos gerais, Filmes e Séries tinham pouca distinção entre organização e descoberta, e a fila precisava ser movida um passo por vez. Agora:
++
++| Área | Organização e comportamento |
++| --- | --- |
++| Início | Continuar assistindo mistura filmes e episódios. Abaixo ficam pendências de séries e escolhas pessoais. Catálogos gerais passam para Descobrir. |
++| Filmes → Quero ver | Continuação, Próximos da fila em ordem manual e demais filmes salvos. Um filme não se repete entre essas fileiras. A fila persistida conserva sua ordem mesmo quando um item aparece em Continuar. |
++| Filmes → Descobrir | Catálogos de filmes dos add-ons, preservando sua identidade. O app não transforma um catálogo popular em ranking personalizado. |
++| Filmes → Histórico | Filmes concluídos, mais recentes primeiro, sem episódios nem duplicação por revisualização. Ações para assistir novamente e organizar uma nova intenção de rever. |
++| Séries → Acompanhando | Em andamento, episódios pendentes, em dia, estreias acompanhadas, episódios a confirmar, pausadas e concluídas. Fileiras sem títulos não aparecem. |
++| Séries → Quero ver | Séries guardadas para depois, separadas do acompanhamento ativo. Salvar e acompanhar são intenções distintas. |
++| Séries → Descobrir | Catálogos de séries. |
++| Agenda | Calendário mensal já existente das séries acompanhadas. Data de lançamento não garante fonte reproduzível. |
++| Busca e Ajustes | Acessos próprios no menu principal, sem uma Biblioteca genérica duplicando Filmes e Séries. |
++
++Cada seção preserva a capa e a fileira selecionadas. O menu principal continua oculto e sobreposto ao abrir; navegar lateralmente não desloca a fileira na vertical. As mensagens de lista vazia oferecem a ação apropriada, diferenciando uma lista pessoal vazia de ausência de catálogo.
++
++## Controle remoto
++
++- Cima na primeira fileira: ações do título. Cima novamente: seletores da seção.
++- Esquerda/direita nos seletores: escolher; OK: entrar. Baixo: ações do título.
++- Esquerda na primeira capa ou em Assistir, ou Voltar: abrir menu principal. Direita: retornar ao conteúdo.
++- Organizar: salvar, remover, entrar/sair da fila ou alterar acompanhamento.
++- Mover na fila: escolher posição com esquerda/direita ou ir ao início/fim; Salvar confirma, Cancelar e Voltar descartam a prévia. A sequência de foco é explícita.
++- Ao focar Organizar, Detalhes ou Amigos, aparece uma descrição curta da ação. Duração não se repete no bloco de informações.
++
++## Pelo celular
++
++O painel local passa a ter Filmes, Séries, Histórico e Ajustes. Permite selecionar qualquer posição da fila de uma vez, acompanhar uma série já salva e guardar um filme assistido para rever. As ações usam as mesmas preferências persistidas na TV.
++
++Consultas periódicas sem mudança não remontam as listas nem destroem o foco. O painel não atualiza a lista enquanto o seletor de posição está aberto. O estado enviado contém resumos de acompanhamento, sem transferir o catálogo completo de episódios a cada consulta.
++
++Esta conexão ainda exige a mesma rede e a central aberta na TV. A paridade completa de todas as preferências e correções de progresso permanece pendente.
++
++## Validação
++
++84 testes automatizados passaram, além de 8 cenários de contrato DOM do painel móvel. O relatório detalhado acompanha o patch. Testes cobrem separação pessoal/descoberta, histórico, agrupamento de séries, não duplicação de títulos, persistência da ordem após reiniciar o DataStore e navegação por teclas. Capturas são da interface nativa renderizada em Robolectric com dados de teste, não do Chromecast de Pedro.
++
++O script `tools/check-personal-phone.cjs` verifica o contrato DOM do painel: seções, listas distintas, cancelamento, movimento, acompanhamento, rever, foco após atualização e erro sem perda do estado. Executar com Node e `jsdom@26.1.0` disponível em `NODE_PATH`. Essa dependência é apenas de teste e não entra no APK. Não equivale a validação física no Safari.
++
++## Sequência de evolução antes do acabamento visual
++
++1. Completar correções de progresso de séries e histórico, com desfazer, incluindo ações equivalentes no celular.
++2. Completar preferências de reprodução/fontes nas duas interfaces e recuperação da biblioteca.
++3. Implementar escolhas por tempo disponível e coleções com fontes reais; uma lista ordenada por nota não será chamada de Top 250 IMDb oficial.
++4. Resolver escrita e importação Letterboxd. O piloto publicado tem conexão/leitura; login real, leitura ao vivo e envio automático ainda não estão validados. O envio automático de avaliações e importação de watchlist/favoritos não estão implementados.
++5. Consolidar um APK para teste de ponta a ponta no Chromecast HD: atualização preservando dados, reprodução/retomada, foco, espaço e abertura. Depois, finalizar tipografia, iconografia e consistência visual das telas herdadas.
++
++Nenhum novo canal, assinatura, dependência nativa ou serviço em segundo plano foi acrescentado por esta iteração. O feed público continua apontando para o APK 0.4.1 publicado.
+--- /dev/null
++++ b/tools/check-personal-phone.cjs
+@@ -0,0 +1,70 @@
++/* DOM contract tests. Install jsdom@26.1.0 outside the Android app, then set NODE_PATH. */
++const fs = require('node:fs');
++const path = require('node:path');
++const assert = require('node:assert/strict');
++const { JSDOM, VirtualConsole } = require('jsdom');
++
++(async () => {
++  const item = (id, type = 'movie') => ({ id, type, name: 'Título ' + id });
++  const state = {
++    version: 'test', availableMB: 300,
++    library: { items: [item('a'), item('b'), item('c'), item('show', 'series')], queueKeys: ['movie:a', 'movie:b'] },
++    series: { ready: true, entries: [] }, history: [{ ...item('seen'), watchedAt: 1 }], searchResults: []
++  };
++  const posts = [], errors = [];
++  let rejectAction = false;
++  const virtualConsole = new VirtualConsole().on('jsdomError', error => errors.push(error.message));
++  const dom = new JSDOM(fs.readFileSync(path.join(__dirname, '../app/src/main/assets/personal/phone.html'), 'utf8'), {
++    url: 'https://cinema.test/', runScripts: 'dangerously', pretendToBeVisual: true, virtualConsole,
++    beforeParse(window) {
++      window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
++      window.HTMLDialogElement.prototype.close = function () { this.open = false; };
++      window.fetch = async (url, options) => {
++        assert.equal(options.headers['X-Cinema-Token'], '__PAIRING_TOKEN__');
++        if (url === '/api/state') return { ok: true, json: async () => JSON.parse(JSON.stringify(state)) };
++        assert.equal(url, '/api/action');
++        const body = JSON.parse(options.body);
++        if (rejectAction) return { ok: false, json: async () => ({ error: 'TV indisponível. Tente novamente.' }) };
++        posts.push(body);
++        if (body.action === 'move') {
++          const keys = state.library.queueKeys;
++          keys.splice(body.position, 0, keys.splice(keys.indexOf('movie:' + body.id), 1)[0]);
++        }
++        if (body.action === 'followSaved') state.series.entries.push({ item: item('show', 'series'), mode: 'FOLLOWING', label: '1 episódio pendente' });
++        if (body.action === 'saveWatched') state.library.items.push(item('seen'));
++        return { ok: true, json: async () => ({ ok: true }) };
++      };
++    }
++  });
++  try {
++    const document = dom.window.document;
++    const $ = selector => document.querySelector(selector);
++    const $$ = selector => [...document.querySelectorAll(selector)];
++    const click = (scope, label) => { const b = [...$(scope).querySelectorAll('button')].find(b => b.textContent === label); assert.ok(b, label); b.click(); };
++    const flush = () => new Promise(resolve => setImmediate(resolve));
++    await flush();
++    assert.equal($$('#queue article').length, 2);
++    assert.equal($$('#watchlist article').length, 1);
++    assert.equal($('[data-panel="series"]').hidden, true);
++    click('#queue article', 'Mover'); $('#position').value = '1'; $('#cancelmove').click();
++    assert.equal(posts.length, 0); assert.equal($('#mover').open, false);
++    click('#queue article', 'Mover'); $('#position').value = '1';
++    $('#moveform').dispatchEvent(new dom.window.Event('submit', { cancelable: true })); await flush();
++    assert.deepEqual(posts[0], { action: 'move', id: 'a', type: 'movie', position: 1 });
++    assert.deepEqual(state.library.queueKeys, ['movie:b', 'movie:a']);
++    assert.equal($('#queue article h3').textContent, 'Título b');
++    $('[data-tab="series"]').click(); assert.equal($('[data-panel="movies"]').hidden, true);
++    click('#savedseries', 'Acompanhar'); await flush();
++    assert.ok($('#series').textContent.includes('1 episódio pendente')); assert.equal(posts.at(-1).action, 'followSaved');
++    $('[data-tab="history"]').click(); assert.equal($('#search').hidden, true);
++    click('#history', 'Salvar para rever'); await flush(); assert.equal(posts.at(-1).action, 'saveWatched');
++    $('[data-tab="movies"]').click(); assert.equal($$('#watchlist article').length, 2);
++    const focus = $('#queue article button'); focus.focus(); await dom.window.refresh();
++    assert.equal(document.activeElement, focus);
++    rejectAction = true; click('#watchlist article', 'Próximos da fila'); await flush();
++    assert.equal($('#status').textContent, 'TV indisponível. Tente novamente.');
++    assert.equal($$('#watchlist article').length, 2); assert.equal(focus.disabled, false);
++    assert.deepEqual(errors, []);
++    console.log('PASS: 8 contratos DOM — seções, listas distintas, cancelamento, movimento, acompanhamento, rever, foco após atualização e erro sem perda de dados.');
++  } finally { dom.window.close(); }
++})().catch(error => { console.error(error); process.exitCode = 1; });

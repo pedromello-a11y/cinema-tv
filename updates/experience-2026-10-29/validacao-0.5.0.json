@@ -1,0 +1,209 @@
+{
+  "version": "0.5.0-pilot",
+  "versionCode": 6,
+  "applicationId": "com.pedrovicq.cinema",
+  "abi": "armeabi-v7a",
+  "apk": "Nuvio-Pedro-0.5.0-Chromecast-HD.apk",
+  "bytes": 71849171,
+  "sha256": "6f8dec774c044206285ffae73e18da83ba957ba4fc15101bad63754e2549c818",
+  "certificate_sha256": "8b42b203779975e6a985b13f32f6b4ce165090cfdec4e0940f5673122a386f1e",
+  "same_signer_as_0_4_1": true,
+  "apk_integrity": true,
+  "debuggable": false,
+  "bundled_letterboxd_adapter_matches_source": true,
+  "tests": [
+    {
+      "name": "com.nuvio.tv.data.repository.WatchProgressRepositoryProfileIsolationTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaBrowseExperienceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaEpisodeEditorUiTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaFocusNavigationTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaHomeNavigationUiTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaModelsTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.CinemaQueuePositionUiTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdAutomationTest",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdConnectionTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdPublicTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.LetterboxdSettingsUiTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalCompletionTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalEpisodeEditorTest",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalLibraryStoreTest",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalMaintenanceTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalPhoneServerTest",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesStoreTest",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesTest",
+      "tests": "12",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSeriesViewModelTest",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalSourcesTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.ui.personal.PersonalTrailersTest",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.nuvio.tv.updater.UpdateBannerPolicyTest",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "android_tests_passed": 110,
+  "javascript_checks_passed": [
+    "phone organization",
+    "episode corrections",
+    "Letterboxd adapter with fixture transport"
+  ],
+  "letterboxd_automatic_engine_implemented": true,
+  "live_account_validation": false,
+  "physical_chromecast_validation": false,
+  "public_update_feed_unchanged": true,
+  "incremental_patch": {
+    "bytes": 72569,
+    "sha256": "99ba6136bf015af0d87e5ccb54e84d39602c76bb564a30e30df1186c307b3290",
+    "changed_files": [
+      "app/build.gradle.kts",
+      "app/src/main/assets/personal/letterboxd-sync.js",
+      "app/src/main/java/com/nuvio/tv/data/local/LibraryPreferences.kt",
+      "app/src/main/java/com/nuvio/tv/domain/model/PersonalLibraryState.kt",
+      "app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaControlCenter.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaLetterboxdSettings.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/CinemaModels.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionActivity.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdConnectionStore.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncEngine.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncHost.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdSyncStore.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/LetterboxdWebSession.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalCompletion.kt",
+      "app/src/main/java/com/nuvio/tv/ui/personal/PersonalControlViewModel.kt",
+      "app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerViewModel.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/LetterboxdAutomationTest.kt",
+      "app/src/test/java/com/nuvio/tv/ui/personal/PersonalLibraryStoreTest.kt",
+      "docs/LETTERBOXD_AUTOMATION.md",
+      "tools/check-letterboxd-sync.cjs"
+    ],
+    "forward_apply_matches_source": true,
+    "reverse_check": true
+  }
+}
