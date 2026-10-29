@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 9,
-  "versionName": "0.5.3-pilot",
-  "notes": "Aba Amigos ao lado do relógio; + numa série acompanha; Continuar sem filmes só espiados ou já vistos; Agenda com imagens e abrindo em hoje.",
+  "versionCode": 10,
+  "versionName": "0.5.4-pilot",
+  "notes": "Navegação entre fileiras corrigida; qualidade disponível na capa (CAM/1080p); aviso quando um filme do Quero ver chega em boa qualidade; trailer legendado em PT-BR.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.3/Cinema-TV-0.5.3-Chromecast-HD.apk",
-      "bytes": 72012436,
-      "sha256": "59ad97cd950917377314dbfdf16b3e7cc550cecdcf536c01bb94414118ab0754"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.4/Cinema-TV-0.5.4-Chromecast-HD.apk",
+      "bytes": 72021048,
+      "sha256": "4740a1918cbeebe65febda628d8138d34ebe8d99e4409e1e51789a4f1385d0ef"
     }
   }
 }
