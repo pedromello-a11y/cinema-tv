@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 10,
-  "versionName": "0.5.4-pilot",
-  "notes": "Navegação entre fileiras corrigida; qualidade disponível na capa (CAM/1080p); aviso quando um filme do Quero ver chega em boa qualidade; trailer legendado em PT-BR.",
+  "versionCode": 11,
+  "versionName": "0.5.5-pilot",
+  "notes": "Fonte escolhida automaticamente (1080p até 5 GB, sem CAM) com a versão visível antes de tocar; sinopses, episódios e elenco em português; trailer só quando você pede; Torrentio com um toque em Ajustes.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.4/Cinema-TV-0.5.4-Chromecast-HD.apk",
-      "bytes": 72021048,
-      "sha256": "4740a1918cbeebe65febda628d8138d34ebe8d99e4409e1e51789a4f1385d0ef"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.5/Cinema-TV-0.5.5-Chromecast-HD.apk",
+      "bytes": 72025044,
+      "sha256": "4c39d5b9a165a5eaa2be9d7bd25faf0220d1503dd45215d71bb5fff3ad75e08c"
     }
   }
 }
