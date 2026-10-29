@@ -1,20 +1,29 @@
-# Iteração de experiência — após 0.4.1
+# Código de experiência — após 0.4.1
 
-Esta pasta contém código em desenvolvimento e validação. **Não é um instalador e não altera o APK disponível no canal de atualização.**
+Este pacote contém código em desenvolvimento e validação. **Não é um APK e não altera o instalador disponível no canal de atualização.**
 
-O Início passa a priorizar continuidade pessoal. Filmes ganha Quero ver, Descobrir e Histórico; Séries ganha Acompanhando, Quero ver e Descobrir. A seleção é preservada por seção, a fila pode ser movida diretamente a uma posição e o painel móvel oferece organização equivalente dessas listas.
+O Início prioriza continuidade pessoal. Filmes ganha Quero ver, Descobrir e Histórico; Séries ganha Acompanhando, Quero ver e Descobrir. A seleção é preservada por seção e a fila pode ser movida diretamente a uma posição.
+
+A segunda rodada acrescenta correção de episódios das séries acompanhadas na TV e no painel móvel: visto/não visto, Já vi até aqui, temporada, prévia e desfazer. O desfazer restaura datas e posição parcial exatas e recusa alterações quando existe progresso posterior nos episódios atingidos.
 
 ## Reproduzir o código
 
 1. Obtenha `Nuvio-Pedro-codigo-0.4.1.zip` na [release v0.4.1](https://github.com/pedromello-a11y/cinema-tv/releases/tag/v0.4.1).
-2. Extraia o ZIP e execute seu `preparar-codigo.py` conforme as instruções para reconstruir a árvore 0.4.1 sobre a base fixa.
-3. Na raiz da árvore reconstruída, aplique `git apply /caminho/experiencia-sobre-0.4.1.patch`.
-4. Leia `docs/EXPERIENCE.md`. Este incremento não contém nem altera a chave de assinatura. O versionCode permanece 5: ainda é uma iteração de fonte, a receber nova versão antes de distribuir.
+2. Extraia e execute seu `preparar-codigo.py` conforme as instruções para reconstruir a árvore 0.4.1 sobre a base fixa.
+3. Na raiz reconstruída, aplique `git apply /caminho/experiencia-sobre-0.4.1.patch`.
+4. Aplique `git apply /caminho/progresso-de-series.patch`.
+5. Leia `docs/EXPERIENCE.md`. Nenhum incremento contém ou altera a chave de assinatura. O versionCode permanece 5; será necessário incrementar a versão antes de distribuir um APK.
 
-O patch foi aplicado a uma cópia da base e os 18 arquivos resultantes foram comparados ao código validado. `git apply --check --reverse` também passou na árvore de desenvolvimento.
+O primeiro patch foi aplicado e seus 18 arquivos comparados à árvore da primeira rodada. O segundo foi aplicado sobre a cópia dessa base e seus 13 arquivos foram comparados ao código validado. Ambos passaram também pela verificação reversa correspondente.
 
-## Verificações
+## Validação atual
 
-84 testes automatizados passaram (`com.nuvio.tv.ui.personal.*` e `UpdateBannerPolicyTest`), incluindo DataStore real e navegação Compose por teclas em Robolectric. O painel móvel passou por oito cenários DOM com Node/jsdom 26.1.0. O relatório identifica as limitações e o hash do patch.
+98 testes automatizados passaram, sem falhas ou ignorados: `com.nuvio.tv.ui.personal.*`, `UpdateBannerPolicyTest` e `WatchProgressRepositoryProfileIsolationTest`. Incluem DataStore real, restauração do histórico e navegação Compose por teclas em Robolectric.
 
-Sem testes físicos nesta iteração: Chromecast, Safari, reprodução e atualização. Escrita automática Letterboxd e importação de listas continuam pendentes. [Experiência e sequência do sistema](EXPERIENCE.md).
+Dois scripts DOM passaram com Node/jsdom 26.1.0: organização do painel e correção de episódios. Essa dependência não entra no APK. Relatórios JSON incluem os hashes dos patches e resultados dos testes.
+
+Sem testes físicos nesta rodada: Chromecast, Safari, reprodução e atualização. Escrita automática Letterboxd e importação de listas continuam pendentes.
+
+## Estado de distribuição
+
+O APK público continua 0.4.1-pilot (versionCode 5). As duas rodadas estão publicadas no [PR #1](https://github.com/pedromello-a11y/cinema-tv/pull/1), no branch `experience/personal-sections`. Este pacote preserva o código completo dos dois incrementos. A publicação do código foi autorizada por Pedro; ainda não houve lançamento de um novo APK.
