@@ -35,17 +35,34 @@ O painel local passa a ter Filmes, Séries, Histórico e Ajustes. Permite seleci
 
 Consultas periódicas sem mudança não remontam as listas nem destroem o foco. O painel não atualiza a lista enquanto o seletor de posição está aberto. O estado enviado contém resumos de acompanhamento, sem transferir o catálogo completo de episódios a cada consulta.
 
-Esta conexão ainda exige a mesma rede e a central aberta na TV. A paridade completa de todas as preferências e correções de progresso permanece pendente.
+Esta conexão ainda exige a mesma rede e a central aberta na TV. A paridade completa de todas as preferências permanece pendente.
+
+## Correção de episódios
+
+Na TV: Séries → selecione uma série acompanhada → Organizar (+) → Corrigir episódios. No painel do celular: Séries → Corrigir episódios. O acompanhamento precisa ter carregado o catálogo da série; a tela informa quando os episódios ainda não estão disponíveis.
+
+- Escolher temporada e episódio, marcar visto ou não visto, usar Já vi até aqui ou Marcar temporada.
+- Conferir a quantidade e os episódios atingidos antes de confirmar; Cancelar e Voltar descartam a prévia.
+- Já vi até aqui inclui o episódio escolhido e temporadas anteriores. As marcações excluem episódios futuros, sem data confirmada, especiais e os que já estão vistos.
+- Desfazer restaura as datas do histórico e a posição parcial anteriores, preservando episódios fora da correção. Se houver reprodução ou alteração posterior nos mesmos episódios, o app recusa o desfazer antigo.
+- A última correção pode ser desfeita durante a sessão, inclusive ao alternar TV e celular. Outra correção substitui essa possibilidade; reiniciar o app a encerra, preservando as alterações já salvas.
+- Uma prévia desatualizada é recusada antes da gravação. O painel recarrega o progresso para nova conferência.
+
+A gravação e a restauração usam o repositório do player e o perfil original. O acompanhamento e as pendências leem esse mesmo histórico; as datas da Agenda continuam vindo do catálogo. O catálogo de episódios só é enviado ao painel quando o editor está aberto. Corrigir episódios não muda a intenção de acompanhar nem a fila de filmes.
+
+Não foi acrescentado serviço em segundo plano nem outro cache de catálogo. O desfazer guarda uma única correção em memória. A restauração em provedores externos não foi testada; esta etapa não implementa escrita Letterboxd.
 
 ## Validação
 
-84 testes automatizados passaram, além de 8 cenários de contrato DOM do painel móvel. O relatório detalhado acompanha o patch. Testes cobrem separação pessoal/descoberta, histórico, agrupamento de séries, não duplicação de títulos, persistência da ordem após reiniciar o DataStore e navegação por teclas. Capturas são da interface nativa renderizada em Robolectric com dados de teste, não do Chromecast de Pedro.
+98 testes automatizados passaram na rodada atual, sem falhas ou testes ignorados, além dos dois scripts de contrato DOM do painel móvel. Testes cobrem separação pessoal/descoberta, histórico, agrupamento de séries, não duplicação de títulos, persistência da ordem após reiniciar o DataStore e navegação por teclas. Para episódios: seleção em lote, conflitos, confirmação única, restauração exata de datas e posição parcial, isolamento de perfil, prévia/cancelamento e foco em episódios futuros. Capturas são da interface nativa renderizada em Robolectric com dados de teste, não do Chromecast de Pedro.
 
 O script `tools/check-personal-phone.cjs` verifica o contrato DOM do painel: seções, listas distintas, cancelamento, movimento, acompanhamento, rever, foco após atualização e erro sem perda do estado. Executar com Node e `jsdom@26.1.0` disponível em `NODE_PATH`. Essa dependência é apenas de teste e não entra no APK. Não equivale a validação física no Safari.
 
+O script `tools/check-personal-episodes.cjs` acrescenta abertura/fechamento do editor, seleção, episódio futuro bloqueado, prévia/cancelamento, confirmação sem duplicação, desfazer e atualização após conflito. O relatório `validacao-progresso-series.json` acompanha o segundo patch, aplicado depois de `experiencia-sobre-0.4.1.patch`.
+
 ## Sequência de evolução antes do acabamento visual
 
-1. Completar correções de progresso de séries e histórico, com desfazer, incluindo ações equivalentes no celular.
+1. Ampliar os acessos à correção de episódios nas telas herdadas e completar correções de histórico de filmes. A edição de séries acompanhadas com prévia e desfazer está implementada na TV e no painel.
 2. Completar preferências de reprodução/fontes nas duas interfaces e recuperação da biblioteca.
 3. Implementar escolhas por tempo disponível e coleções com fontes reais; uma lista ordenada por nota não será chamada de Top 250 IMDb oficial.
 4. Resolver escrita e importação Letterboxd. O piloto publicado tem conexão/leitura; login real, leitura ao vivo e envio automático ainda não estão validados. O envio automático de avaliações e importação de watchlist/favoritos não estão implementados.
