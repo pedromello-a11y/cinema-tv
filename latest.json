@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 11,
-  "versionName": "0.5.5-pilot",
-  "notes": "Fonte escolhida automaticamente (1080p até 5 GB, sem CAM) com a versão visível antes de tocar; sinopses, episódios e elenco em português; trailer só quando você pede; Torrentio com um toque em Ajustes.",
+  "versionCode": 12,
+  "versionName": "0.5.6-pilot",
+  "notes": "Início com o que seus amigos amaram e o que está em alta; fim de filme com sua nota e os amigos; barras do player em preto.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.5/Cinema-TV-0.5.5-Chromecast-HD.apk",
-      "bytes": 72025044,
-      "sha256": "4c39d5b9a165a5eaa2be9d7bd25faf0220d1503dd45215d71bb5fff3ad75e08c"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.6/Cinema-TV-0.5.6-Chromecast-HD.apk",
+      "bytes": 72028676,
+      "sha256": "cf3b5190d7b2df40165aa3c9b116ee17ee8e7d3d907c7ed0a872f11d3f32b969"
     }
   }
 }
