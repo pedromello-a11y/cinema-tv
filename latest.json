@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 5,
-  "versionName": "0.4.1-pilot",
-  "notes": "Piloto de conexão Letterboxd, amigos por filme e avaliações locais pendentes. Envio automático ainda desativado.",
+  "versionCode": 7,
+  "versionName": "0.5.1-pilot",
+  "notes": "Navegação do controle corrigida, nova identidade visual e verificação da sessão Letterboxd. A sincronização automática do Letterboxd será refeita na 0.5.2.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.4.1/Nuvio-Pedro-0.4.1-Chromecast-HD.apk",
-      "bytes": 71807067,
-      "sha256": "158367a0aab05bdb8736a94b414c71f15f60d90eb5d8808bfb470871a49403df"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v0.5.1/Cinema-TV-0.5.1-Chromecast-HD.apk",
+      "bytes": 71997376,
+      "sha256": "63f517ce8f66bbfc777a9f7d6399eb217d9942d2c5ac2600702c75e3f20752d8"
     }
   }
 }
