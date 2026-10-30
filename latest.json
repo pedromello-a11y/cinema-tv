@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 15,
-  "versionName": "1.1.0",
-  "notes": "Letterboxd volta a receber as notas, Ajustes novos, datas dos amigos.",
+  "versionCode": 16,
+  "versionName": "1.2.0",
+  "notes": "Trailer no Início, duração e término, Quero ver ligado ao Letterboxd, listas dos amigos.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v1.1.0/Cinema-TV-1.1.0-Chromecast-HD.apk",
-      "bytes": 72050288,
-      "sha256": "887d829602342bdace0c9e6c6ae09d1569c7551d68efaaf1b36bb662c8fab1d2"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v1.2.0/Cinema-TV-1.2.0-Chromecast-HD.apk",
+      "bytes": 72054472,
+      "sha256": "cecd98841b17cfbca47f2386961200cbb4db8063bdcf079cbf090b585aab4d41"
     }
   }
 }
