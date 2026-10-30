@@ -1,13 +1,13 @@
 {
   "applicationId": "com.pedrovicq.cinema",
-  "versionCode": 14,
-  "versionName": "1.0.0",
-  "notes": "Versão 1.0: busca nova (por voz também), amigos sem apertar nada, fonte escolhida automaticamente e tudo em português.",
+  "versionCode": 15,
+  "versionName": "1.1.0",
+  "notes": "Letterboxd volta a receber as notas, Ajustes novos, datas dos amigos.",
   "assets": {
     "armeabi-v7a": {
-      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v1.0.0/Cinema-TV-1.0.0-Chromecast-HD.apk",
-      "bytes": 72038796,
-      "sha256": "a12716202aafd0c8b0e96965e38328cbde0e624ea76f8fc32382a77a7afda33b"
+      "url": "https://github.com/pedromello-a11y/cinema-tv/releases/download/v1.1.0/Cinema-TV-1.1.0-Chromecast-HD.apk",
+      "bytes": 72050288,
+      "sha256": "887d829602342bdace0c9e6c6ae09d1569c7551d68efaaf1b36bb662c8fab1d2"
     }
   }
 }
